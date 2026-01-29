@@ -7,19 +7,29 @@
 <style>
 body { font-family:sans-serif; background:#f2f2f2; margin:0; padding:8px; }
 .app { max-width:360px; margin:0 auto; }
-.top { text-align:right; font-size:11px; color:#555; margin-bottom:6px; }
-.top span { text-decoration:underline; cursor:pointer; margin-left:6px; }
+
+.top {
+  text-align:right;
+  font-size:11px;
+  color:#555;
+  margin-bottom:6px;
+}
+.top span { cursor:pointer; text-decoration:underline; margin-left:6px; }
 
 .card {
-  background:#fff; border-radius:8px; padding:8px; margin-bottom:8px;
-  box-shadow:0 1px 3px rgba(0,0,0,.08); border:2px solid transparent;
+  background:#fff;
+  border-radius:8px;
+  padding:8px;
+  margin-bottom:8px;
+  border:2px solid transparent;
+  box-shadow:0 1px 3px rgba(0,0,0,.08);
 }
 .card.free { background:#e8f5e9; border-color:#4caf50; }
 .card.assigned { border-color:#e53935; }
 .card.unavailable { background:#eee; border-color:#9e9e9e; }
 
-.row { display:flex; align-items:flex-start; gap:10px; }
-img { width:100%; max-width:130px; }
+.row { display:flex; gap:10px; align-items:flex-start; }
+img { width:130px; }
 
 .name { font-size:13px; font-weight:600; margin-top:4px; }
 .updated { font-size:11px; color:#777; margin-top:2px; }
@@ -36,13 +46,20 @@ select { width:100%; font-size:13px; padding:4px; }
 }
 
 .edit-btn {
-  font-size:11px; padding:2px 6px;
-  border:1px solid #999; border-radius:4px;
-  cursor:pointer; background:#fff;
+  font-size:11px;
+  padding:2px 6px;
+  border:1px solid #999;
+  border-radius:4px;
+  background:#fff;
+  cursor:pointer;
 }
 .edit-on { background:#ffecb3; border-color:#ff9800; }
 
-input.date { width:100%; font-size:11px; padding:2px; }
+input.date {
+  width:100%;
+  font-size:11px;
+  padding:2px;
+}
 </style>
 </head>
 
@@ -68,22 +85,18 @@ input.date { width:100%; font-size:11px; padding:2px; }
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
 
 <script>
-const firebaseConfig = {
+/* ---------------- FIREBASE ---------------- */
+firebase.initializeApp({
   apiKey: "AIzaSyCqJ-LqV_hn06MhfweOTJGIDmIt5bIq2JI",
   authDomain: "baan-namsai-bikes.firebaseapp.com",
-  projectId: "baan-namsai-bikes",
-  storageBucket: "baan-namsai-bikes.firebasestorage.app",
-  messagingSenderId: "25012885530",
-  appId: "1:25012885530:web:112e1ec9855473d6d399a3"
-};
+  projectId: "baan-namsai-bikes"
+});
 
-firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.firestore();
 
+/* ---------------- CONFIG ---------------- */
 const ADMIN_UID = "pK46rxDcvEVZEyktMvc8g2FaCoH2";
-let editMode = false;
-let pendingStatusChange = null;
 
 const bikes = [
   { id:1, name:"Honda Click", img:"click_redblack.png", plate:"1กต 8316" },
@@ -91,27 +104,32 @@ const bikes = [
   { id:3, name:"Yamaha Fazzio blue", img:"fazzio_lightblue.png", plate:"1กพ 2670" }
 ];
 
-auth.onAuthStateChanged(u=>{
-  document.getElementById("username").innerText = u ? u.displayName : "—";
-  document.getElementById("editToggle").style.display =
-    (u && u.uid===ADMIN_UID) ? "inline" : "none";
+let editMode = false;
+let pendingStatus = null;
 
-  if(u && pendingStatusChange){
-    applyStatusChange(pendingStatusChange.id, pendingStatusChange.value);
-    pendingStatusChange = null;
+/* ---------------- AUTH ---------------- */
+auth.onAuthStateChanged(user=>{
+  document.getElementById("username").innerText =
+    user ? user.displayName : "—";
+
+  document.getElementById("editToggle").style.display =
+    (user && user.uid === ADMIN_UID) ? "inline" : "none";
+
+  if(user && pendingStatus){
+    applyStatus(pendingStatus.id, pendingStatus.value);
+    pendingStatus = null;
   }
 });
 
-function signIn(){ auth.signInWithPopup(new firebase.auth.GoogleAuthProvider()); }
-function signOut(){ editMode=false; auth.signOut(); }
-
-function toggleEdit(){
-  editMode = !editMode;
-  document.getElementById("editBtn").classList.toggle("edit-on", editMode);
-  rerenderAll();
+function signIn(){
+  auth.signInWithPopup(new firebase.auth.GoogleAuthProvider());
+}
+function signOut(){
+  editMode = false;
+  auth.signOut();
 }
 
-/* ---- DATE HELPERS ---- */
+/* ---------------- DATE HELPERS ---------------- */
 function parseDate(str){
   if(!str) return null;
   if(str.includes("-")) return new Date(str+"T00:00:00");
@@ -121,7 +139,7 @@ function parseDate(str){
 function daysLeft(str){
   const d = parseDate(str);
   if(!d) return NaN;
-  return Math.ceil((d - new Date())/86400000);
+  return Math.ceil((d - new Date()) / 86400000);
 }
 function remaining(days){
   if(isNaN(days)) return "";
@@ -130,17 +148,21 @@ function remaining(days){
   if(days < 60) return days+" days / วัน";
   return Math.round(days/30)+" months / เดือน";
 }
-
-/* ---- TIME AGO ---- */
 function timeAgo(ts){
-  const diff = Math.floor((Date.now()-ts)/1000);
-  if(diff < 3600) return Math.floor(diff/60)+" min ago";
-  if(diff < 86400) return Math.floor(diff/3600)+" h ago";
+  const s = Math.floor((Date.now()-ts)/1000);
+  if(s < 3600) return Math.floor(s/60)+" min ago";
+  if(s < 86400) return Math.floor(s/3600)+" h ago";
   const d = new Date(ts);
-  return `${Math.floor(diff/86400)} d ago · ${String(d.getDate()).padStart(2,"0")}/${String(d.getMonth()+1).padStart(2,"0")}/${String(d.getFullYear()).slice(-2)} ${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}`;
+  return `${Math.floor(s/86400)} d ago · ${String(d.getDate()).padStart(2,"0")}/${String(d.getMonth()+1).padStart(2,"0")}/${String(d.getFullYear()).slice(-2)} ${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}`;
 }
 
-/* ---- UI ---- */
+/* ---------------- UI ---------------- */
+function toggleEdit(){
+  editMode = !editMode;
+  document.getElementById("editBtn").classList.toggle("edit-on", editMode);
+  rerenderAll();
+}
+
 function renderBike(b){
   return `
   <div class="card" id="bike${b.id}-card">
@@ -161,7 +183,38 @@ function renderBike(b){
   </div>`;
 }
 
-document.getElementById("bikes").innerHTML = bikes.map(renderBike).join("");
+document.getElementById("bikes").innerHTML =
+  bikes.map(renderBike).join("");
+
+/* ---------------- RENDER LOGIC ---------------- */
+function expiryBlock(bikeId, d, plate){
+  const taxDays = daysLeft(d.taxExpiry);
+  const insDays = daysLeft(d.insuranceExpiry);
+
+  function line(label, field, days, value){
+    let cls = "";
+    if(days < 0) cls = "expired";
+    else if(days <= 14) cls = "warn";
+
+    if(editMode){
+      const dt = parseDate(value);
+      const v = dt
+        ? `${String(dt.getDate()).padStart(2,"0")}/${String(dt.getMonth()+1).padStart(2,"0")}/${String(dt.getFullYear()).slice(-2)}`
+        : "";
+      return `<div class="${cls}">
+        ${label}: <input class="date" value="${v}"
+        onchange="updateExpiry('${bikeId}','${field}',this.value)">
+      </div>`;
+    }
+    return `<div class="${cls}">${label}: ${remaining(days)}</div>`;
+  }
+
+  return `
+    ${line("Tax / ภาษี","taxExpiry",taxDays,d.taxExpiry)}
+    ${line("Insurance / ประกัน","insuranceExpiry",insDays,d.insuranceExpiry)}
+    <div>Plate / ทะเบียน: ${plate}</div>
+  `;
+}
 
 bikes.forEach(b=>{
   db.collection("bikes").doc("bike"+b.id).onSnapshot(doc=>{
@@ -179,53 +232,45 @@ bikes.forEach(b=>{
 
     if(d.updatedAt?.toMillis){
       document.getElementById("bike"+b.id+"-time").innerText =
-        "Updated "+timeAgo(d.updatedAt.toMillis())+
-        (d.updatedBy?" by "+d.updatedBy:"");
+        "Updated " + timeAgo(d.updatedAt.toMillis()) +
+        (d.updatedBy ? " by "+d.updatedBy : "");
     }
 
     document.getElementById("bike"+b.id+"-expiry").innerHTML =
-      expiryBlock(b.id,d,b.plate);
+      expiryBlock("bike"+b.id, d, b.plate);
   });
 });
-
-function expiryBlock(id,d,plate){
-  return `
-    <div class="${daysLeft(d.taxExpiry)<=14?'warn':''}">
-      Tax / ภาษี: ${remaining(daysLeft(d.taxExpiry))}
-    </div>
-    <div class="${daysLeft(d.insuranceExpiry)<=14?'warn':''}">
-      Insurance / ประกัน: ${remaining(daysLeft(d.insuranceExpiry))}
-    </div>
-    <div>Plate / ทะเบียน: ${plate}</div>
-  `;
-}
 
 function rerenderAll(){
   bikes.forEach(b=>{
     db.collection("bikes").doc("bike"+b.id).get().then(doc=>{
       if(doc.exists){
         document.getElementById("bike"+b.id+"-expiry").innerHTML =
-          expiryBlock(b.id,doc.data(),b.plate);
+          expiryBlock("bike"+b.id, doc.data(), b.plate);
       }
     });
   });
 }
 
-/* ---- SAVE ---- */
+/* ---------------- SAVE ---------------- */
 function saveStatus(id,val){
   if(!auth.currentUser){
-    pendingStatusChange = { id, value: val };
+    pendingStatus = { id, value: val };
     signIn();
     return;
   }
-  applyStatusChange(id,val);
+  applyStatus(id,val);
 }
-function applyStatusChange(id,val){
+function applyStatus(id,val){
   db.collection("bikes").doc("bike"+id).update({
     status: val,
     updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
     updatedBy: auth.currentUser.displayName
   });
+}
+function updateExpiry(bikeId,field,val){
+  if(!editMode) return;
+  db.collection("bikes").doc(bikeId).update({ [field]: val });
 }
 </script>
 
