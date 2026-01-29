@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!DOCTYPE html><!DOCTYPE html>
 <html>
 <head>
 <meta charset="UTF-8">
@@ -85,6 +85,7 @@ select {
   display: none;
   align-items: center;
   justify-content: center;
+  z-index: 999;
 }
 
 .modal-box {
@@ -134,7 +135,7 @@ select {
 <div class="app">
 
 <div class="top">
-  User: <strong id="username"></strong> · <span onclick="changeName()">Change</span>
+  User: <strong id="username">—</strong> · <span onclick="changeName()">Change</span>
 </div>
 
 <div class="card" id="bike1-card">
@@ -187,35 +188,16 @@ function showNameModal() {
 }
 
 function saveName() {
-  const name = document.getElementById("nameInput").value.trim();
+  const input = document.getElementById("nameInput");
+  const name = input.value.trim();
   if (!name) return;
   localStorage.setItem("username", name);
   document.getElementById("username").innerText = name;
   document.getElementById("nameModal").style.display = "none";
+  updateUI();
 }
 
 function changeName() {
   localStorage.removeItem("username");
-  showNameModal();
-}
+  document.getElementById("us
 
-function save(id, value) {
-  const user = localStorage.getItem("username") || "Unknown";
-  localStorage.setItem("bike" + id, value);
-  localStorage.setItem("bike" + id + "_time", Date.now());
-  localStorage.setItem("bike" + id + "_by", user);
-  updateUI();
-}
-
-function timeAgo(ts) {
-  const mins = Math.floor((Date.now() - ts) / 60000);
-  if (mins < 60) return mins + " min ago";
-  if (mins < 1440) return Math.floor(mins / 60) + " h ago";
-  return new Date(ts).toLocaleDateString();
-}
-
-function updateUI() {
-  for (let i = 1; i <= 3; i++) {
-    const card = document.getElementById("bike" + i + "-card");
-    const select = card.querySelector("select");
-    const value = localStorage.getItem("bike" + i) ||
