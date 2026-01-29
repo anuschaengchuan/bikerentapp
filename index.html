@@ -55,7 +55,7 @@ input.date { width:100%; font-size:11px; padding:2px; }
   <span onclick="signIn()">Sign in</span>
   <span onclick="signOut()">Sign out</span>
   <span id="editToggle" style="display:none">
-   <button id="editBtn" class="edit-btn" onclick="toggleEdit()">Edit</button>
+    · <button id="editBtn" class="edit-btn" onclick="toggleEdit()">Edit</button>
   </span>
 </div>
 
@@ -83,8 +83,6 @@ const db = firebase.firestore();
 
 const ADMIN_UID = "pK46rxDcvEVZEyktMvc8g2FaCoH2";
 let editMode = false;
-
-/* 🔁 pending change memory */
 let pendingStatusChange = null;
 
 const bikes = [
@@ -98,23 +96,14 @@ auth.onAuthStateChanged(u=>{
   document.getElementById("editToggle").style.display =
     (u && u.uid===ADMIN_UID) ? "inline" : "none";
 
-  /* ✅ apply pending change after login */
   if(u && pendingStatusChange){
-    applyStatusChange(
-      pendingStatusChange.id,
-      pendingStatusChange.value
-    );
+    applyStatusChange(pendingStatusChange.id, pendingStatusChange.value);
     pendingStatusChange = null;
   }
 });
 
-function signIn(){
-  auth.signInWithPopup(new firebase.auth.GoogleAuthProvider());
-}
-function signOut(){
-  editMode=false;
-  auth.signOut();
-}
+function signIn(){ auth.signInWithPopup(new firebase.auth.GoogleAuthProvider()); }
+function signOut(){ editMode=false; auth.signOut(); }
 
 function toggleEdit(){
   editMode = !editMode;
@@ -122,42 +111,36 @@ function toggleEdit(){
   rerenderAll();
 }
 
-/* ---------- DATE HELPERS ---------- */
-function parseDateFlexible(str){
+/* ---- DATE HELPERS ---- */
+function parseDate(str){
   if(!str) return null;
-  if(str.includes("-")) return new Date(str + "T00:00:00");
-  if(str.includes("/")){
-    const [d,m,y] = str.split("/").map(Number);
-    return new Date(2000+y, m-1, d);
-  }
-  return null;
+  if(str.includes("-")) return new Date(str+"T00:00:00");
+  const [d,m,y] = str.split("/").map(Number);
+  return new Date(2000+y, m-1, d);
 }
-function formatDMY(d){
-  return `${String(d.getDate()).padStart(2,"0")}/${String(d.getMonth()+1).padStart(2,"0")}/${String(d.getFullYear()).slice(-2)}`;
-}
-function daysLeftFlexible(str){
-  const d = parseDateFlexible(str);
+function daysLeft(str){
+  const d = parseDate(str);
   if(!d) return NaN;
   return Math.ceil((d - new Date())/86400000);
 }
-function remainingText(days){
+function remaining(days){
   if(isNaN(days)) return "";
-  if(days<0) return "Expired / หมดอายุ";
-  if(days<=14) return days+" days / วัน";
-  if(days<60) return days+" days / วัน";
+  if(days < 0) return "Expired / หมดอายุ";
+  if(days <= 14) return days+" days / วัน";
+  if(days < 60) return days+" days / วัน";
   return Math.round(days/30)+" months / เดือน";
 }
 
-/* ---------- TIME AGO ---------- */
+/* ---- TIME AGO ---- */
 function timeAgo(ts){
   const diff = Math.floor((Date.now()-ts)/1000);
-  if(diff<3600) return Math.floor(diff/60)+" min ago";
-  if(diff<86400) return Math.floor(diff/3600)+" h ago";
+  if(diff < 3600) return Math.floor(diff/60)+" min ago";
+  if(diff < 86400) return Math.floor(diff/3600)+" h ago";
   const d = new Date(ts);
-  return `${Math.floor(diff/86400)} d ago · ${formatDMY(d)} ${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}`;
+  return `${Math.floor(diff/86400)} d ago · ${String(d.getDate()).padStart(2,"0")}/${String(d.getMonth()+1).padStart(2,"0")}/${String(d.getFullYear()).slice(-2)} ${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}`;
 }
 
-/* ---------- UI ---------- */
+/* ---- UI ---- */
 function renderBike(b){
   return `
   <div class="card" id="bike${b.id}-card">
@@ -178,8 +161,7 @@ function renderBike(b){
   </div>`;
 }
 
-document.getElementById("bikes").innerHTML =
-  bikes.map(renderBike).join("");
+document.getElementById("bikes").innerHTML = bikes.map(renderBike).join("");
 
 bikes.forEach(b=>{
   db.collection("bikes").doc("bike"+b.id).onSnapshot(doc=>{
@@ -197,42 +179,52 @@ bikes.forEach(b=>{
 
     if(d.updatedAt?.toMillis){
       document.getElementById("bike"+b.id+"-time").innerText =
-        "Updated " + timeAgo(d.updatedAt.toMillis()) +
-        (d.updatedBy ? " by " + d.updatedBy : "");
+        "Updated "+timeAgo(d.updatedAt.toMillis())+
+        (d.updatedBy?" by "+d.updatedBy:"");
     }
 
     document.getElementById("bike"+b.id+"-expiry").innerHTML =
-      `<div>${b.plate}</div>`;
+      expiryBlock(b.id,d,b.plate);
   });
 });
 
-/* ---------- STATUS SAVE (FIXED) ---------- */
-function saveStatus(id,val){
-  if(!auth.currentUser){
-    pendingStatusChange = { id:id, value:val };
-    signIn();
-    return;
-  }
-  applyStatusChange(id,val);
+function expiryBlock(id,d,plate){
+  return `
+    <div class="${daysLeft(d.taxExpiry)<=14?'warn':''}">
+      Tax / ภาษี: ${remaining(daysLeft(d.taxExpiry))}
+    </div>
+    <div class="${daysLeft(d.insuranceExpiry)<=14?'warn':''}">
+      Insurance / ประกัน: ${remaining(daysLeft(d.insuranceExpiry))}
+    </div>
+    <div>Plate / ทะเบียน: ${plate}</div>
+  `;
 }
 
-function applyStatusChange(id,val){
-  db.collection("bikes").doc("bike"+id).update({
-    status: val,
-    updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
-    updatedBy: auth.currentUser.displayName
-  });
-}
-
-/* ---------- RERENDER ---------- */
 function rerenderAll(){
   bikes.forEach(b=>{
     db.collection("bikes").doc("bike"+b.id).get().then(doc=>{
       if(doc.exists){
         document.getElementById("bike"+b.id+"-expiry").innerHTML =
-          `<div>${b.plate}</div>`;
+          expiryBlock(b.id,doc.data(),b.plate);
       }
     });
+  });
+}
+
+/* ---- SAVE ---- */
+function saveStatus(id,val){
+  if(!auth.currentUser){
+    pendingStatusChange = { id, value: val };
+    signIn();
+    return;
+  }
+  applyStatusChange(id,val);
+}
+function applyStatusChange(id,val){
+  db.collection("bikes").doc("bike"+id).update({
+    status: val,
+    updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+    updatedBy: auth.currentUser.displayName
   });
 }
 </script>
