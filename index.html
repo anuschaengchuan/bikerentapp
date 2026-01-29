@@ -1,4 +1,4 @@
-<!DOCTYPE html><!DOCTYPE html>
+<!DOCTYPE html>
 <html>
 <head>
 <meta charset="UTF-8">
@@ -88,8 +88,8 @@ let editMode = false;
 
 const bikes = [
   { id:1, name:"Honda Click", img:"click_redblack.png", plate:"1กต 8316" },
-  { id:2, name:"Yamaha Fazzio grey", img:"fazzio_darkgrey.png", plate:"1กร 5287" },
-  { id:3, name:"Yamaha Fazzio blue", img:"fazzio_lightblue.png", plate:"1กพ 2670" }
+  { id:2, name:"Yamaha Fazzio", img:"fazzio_darkgrey.png", plate:"1กร 5287" },
+  { id:3, name:"Yamaha Fazzio", img:"fazzio_lightblue.png", plate:"1กพ 2670" }
 ];
 
 auth.onAuthStateChanged(u=>{
@@ -107,10 +107,19 @@ function toggleEdit(){
   rerenderAll();
 }
 
-function parseDMY(str){
-  const [d,m,y] = str.split("/").map(Number);
-  return new Date(2000 + y, m-1, d);
+/* --- DATE HELPERS (supports YYYY-MM-DD and DD/MM/YY) --- */
+function parseDateFlexible(str){
+  if(!str) return null;
+  if(str.includes("-")){
+    return new Date(str + "T00:00:00");
+  }
+  if(str.includes("/")){
+    const [d,m,y] = str.split("/").map(Number);
+    return new Date(2000 + y, m-1, d);
+  }
+  return null;
 }
+
 function formatDMY(date){
   const d = String(date.getDate()).padStart(2,"0");
   const m = String(date.getMonth()+1).padStart(2,"0");
@@ -118,11 +127,14 @@ function formatDMY(date){
   return `${d}/${m}/${y}`;
 }
 
-function daysLeftDMY(str){
-  return Math.ceil((parseDMY(str) - new Date()) / 86400000);
+function daysLeftFlexible(str){
+  const date = parseDateFlexible(str);
+  if(!date) return NaN;
+  return Math.ceil((date - new Date()) / 86400000);
 }
 
 function remainingText(days){
+  if(isNaN(days)) return "";
   if(days < 0) return "Expired / หมดอายุ";
   if(days <= 14) return days + " days / วัน";
   if(days < 60) return days + " days / วัน";
@@ -130,21 +142,23 @@ function remainingText(days){
 }
 
 function expiryLine(label, field, val, bikeId){
-  const days = daysLeftDMY(val);
+  const days = daysLeftFlexible(val);
   let cls = "";
   if(days < 0) cls = "expired";
   else if(days <= 14) cls = "warn";
 
   if(editMode){
+    const d = parseDateFlexible(val);
     return `<div class="${cls}">
       ${label}:
-      <input class="date" value="${val}"
+      <input class="date" value="${d ? formatDMY(d) : ""}"
         onchange="updateExpiry('${bikeId}','${field}',this.value)">
     </div>`;
   }
   return `<div class="${cls}">${label}: ${remainingText(days)}</div>`;
 }
 
+/* --- UPDATED TIME --- */
 function timeAgo(ts){
   const diff = Math.floor((Date.now()-ts)/1000);
   if(diff < 3600) return Math.floor(diff/60)+" min ago";
@@ -153,6 +167,7 @@ function timeAgo(ts){
   return `${Math.floor(diff/86400)} d ago · ${formatDMY(d)} ${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}`;
 }
 
+/* --- UI --- */
 function renderBike(b){
   return `
   <div class="card" id="bike${b.id}-card">
@@ -192,7 +207,8 @@ bikes.forEach(b=>{
 
     if(d.updatedAt?.toMillis){
       document.getElementById("bike"+b.id+"-time").innerText =
-        "Updated " + timeAgo(d.updatedAt.toMillis());
+        "Updated " + timeAgo(d.updatedAt.toMillis()) +
+        (d.updatedBy ? " by " + d.updatedBy : "");
     }
 
     document.getElementById("bike"+b.id+"-expiry").innerHTML =
@@ -233,4 +249,3 @@ function updateExpiry(bikeId,field,val){
 
 </body>
 </html>
-
