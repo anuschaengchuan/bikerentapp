@@ -2,7 +2,6 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Motorbike Assignments</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 
 <style>
@@ -10,56 +9,60 @@ body {
   font-family: sans-serif;
   background: #f2f2f2;
   margin: 0;
-  padding: 20px;
+  padding: 12px;
 }
 
 .app {
-  max-width: 420px;
+  max-width: 380px;
   margin: 0 auto;
 }
 
-h2 {
-  margin-bottom: 20px;
-}
-
 .card {
-  background: #ffffff;
-  border-radius: 12px;
-  padding: 16px;
-  margin-bottom: 16px;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+  background: #fff;
+  border-radius: 10px;
+  padding: 10px;
+  margin-bottom: 10px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.08);
   border: 2px solid transparent;
-  transition: background 0.2s, border 0.2s;
 }
 
-/* FREE */
 .card.free {
   background: #e8f5e9;
   border-color: #4caf50;
 }
 
-/* ASSIGNED */
 .card.assigned {
   border-color: #e53935;
 }
 
 img {
   width: 100%;
-  max-width: 260px;
+  max-width: 200px;
   display: block;
-  margin: 0 auto 12px;
+  margin: 0 auto 6px;
 }
 
-.small {
-  color: #666;
+.name {
+  font-weight: 600;
   font-size: 14px;
+}
+
+.meta {
+  font-size: 12px;
+  color: #666;
+  margin-bottom: 4px;
+}
+
+.updated {
+  font-size: 11px;
+  color: #888;
+  margin-top: 4px;
 }
 
 select {
   width: 100%;
-  font-size: 16px;
-  padding: 8px;
-  margin-top: 8px;
+  font-size: 14px;
+  padding: 6px;
 }
 </style>
 </head>
@@ -68,74 +71,90 @@ select {
 
 <div class="app">
 
-<h2>Motorbike Assignments</h2>
-
 <div class="card" id="bike1-card">
-  <img src="click_redblack.png" alt="Honda Click 125 Red Black">
-  <strong>Honda Click 125</strong>
-  <div class="small">Red / Black</div>
-  <select onchange="save('bike1', this.value)">
+  <img src="click_redblack.png">
+  <div class="name">Honda Click 125</div>
+  <div class="meta">Red / Black</div>
+  <select onchange="save(1,this.value)">
     <option value="Free">Free</option>
     <option>Baan Mai</option>
     <option>Baan Mai Pai</option>
     <option>Baan Nam Lom</option>
     <option>Baan Makham</option>
   </select>
+  <div class="updated" id="bike1-time"></div>
 </div>
 
 <div class="card" id="bike2-card">
-  <img src="fazzio_darkgrey.png" alt="Yamaha Fazzio Dark Grey">
-  <strong>Yamaha Fazzio</strong>
-  <div class="small">Dark Grey</div>
-  <select onchange="save('bike2', this.value)">
+  <img src="fazzio_darkgrey.png">
+  <div class="name">Yamaha Fazzio</div>
+  <div class="meta">Dark Grey</div>
+  <select onchange="save(2,this.value)">
     <option value="Free">Free</option>
     <option>Baan Mai</option>
     <option>Baan Mai Pai</option>
     <option>Baan Nam Lom</option>
     <option>Baan Makham</option>
   </select>
+  <div class="updated" id="bike2-time"></div>
 </div>
 
 <div class="card" id="bike3-card">
-  <img src="fazzio_lightblue.png" alt="Yamaha Fazzio Light Blue">
-  <strong>Yamaha Fazzio</strong>
-  <div class="small">Light Blue</div>
-  <select onchange="save('bike3', this.value)">
+  <img src="fazzio_lightblue.png">
+  <div class="name">Yamaha Fazzio</div>
+  <div class="meta">Light Blue</div>
+  <select onchange="save(3,this.value)">
     <option value="Free">Free</option>
     <option>Baan Mai</option>
     <option>Baan Mai Pai</option>
     <option>Baan Nam Lom</option>
     <option>Baan Makham</option>
   </select>
+  <div class="updated" id="bike3-time"></div>
 </div>
 
 </div>
 
 <script>
-function save(key, value) {
-  localStorage.setItem(key, value);
+function save(id, value) {
+  localStorage.setItem("bike" + id, value);
+  localStorage.setItem("bike" + id + "_time", Date.now());
   updateUI();
 }
 
+function timeAgo(ts) {
+  if (!ts) return "";
+  const diff = Math.floor((Date.now() - ts) / 60000); // minutes
+
+  if (diff < 60) return diff + " min ago";
+  if (diff < 1440) return Math.floor(diff / 60) + " h ago";
+
+  const d = new Date(ts);
+  return d.toLocaleDateString();
+}
+
 function updateUI() {
-  document.querySelectorAll(".card").forEach((card, index) => {
-    const key = "bike" + (index + 1);
-    const value = localStorage.getItem(key) || "Free";
+  for (let i = 1; i <= 3; i++) {
+    const card = document.getElementById("bike" + i + "-card");
     const select = card.querySelector("select");
+    const value = localStorage.getItem("bike" + i) || "Free";
+    const ts = localStorage.getItem("bike" + i + "_time");
 
     select.value = value;
     card.classList.remove("free", "assigned");
 
-    if (value === "Free") {
-      card.classList.add("free");
-    } else {
-      card.classList.add("assigned");
-    }
-  });
+    if (value === "Free") card.classList.add("free");
+    else card.classList.add("assigned");
+
+    document.getElementById("bike" + i + "-time").innerText =
+      ts ? "Updated " + timeAgo(Number(ts)) : "";
+  }
 }
 
 updateUI();
+setInterval(updateUI, 60000); // refresh time text every minute
 </script>
 
 </body>
 </html>
+
