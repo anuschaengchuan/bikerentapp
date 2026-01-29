@@ -5,92 +5,31 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 
 <style>
-body {
-  font-family: sans-serif;
-  background: #f2f2f2;
-  margin: 0;
-  padding: 8px;
-}
-
-.app {
-  max-width: 360px;
-  margin: 0 auto;
-}
-
-.top {
-  text-align: right;
-  font-size: 11px;
-  color: #555;
-  margin-bottom: 6px;
-}
-
-.top span {
-  text-decoration: underline;
-  cursor: pointer;
-  margin-left: 6px;
-}
+body { font-family:sans-serif; background:#f2f2f2; margin:0; padding:8px; }
+.app { max-width:360px; margin:0 auto; }
+.top { text-align:right; font-size:11px; color:#555; margin-bottom:6px; }
+.top span { text-decoration:underline; cursor:pointer; margin-left:6px; }
 
 .card {
-  background: #fff;
-  border-radius: 8px;
-  padding: 8px;
-  margin-bottom: 8px;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
-  border: 2px solid transparent;
+  background:#fff; border-radius:8px; padding:8px; margin-bottom:8px;
+  box-shadow:0 1px 3px rgba(0,0,0,.08); border:2px solid transparent;
 }
-
 .card.free { background:#e8f5e9; border-color:#4caf50; }
 .card.assigned { border-color:#e53935; }
 .card.unavailable { background:#eee; border-color:#9e9e9e; }
 
-.row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
+.row { display:flex; align-items:center; gap:8px; }
+img { width:100%; max-width:130px; }
+.name { font-size:13px; font-weight:600; margin-top:4px; }
+.updated { font-size:11px; color:#777; margin-top:2px; }
+select { width:100%; font-size:13px; padding:4px; }
+.info { font-size:11px; color:#555; }
 
-img {
-  width: 100%;
-  max-width: 130px;
-}
-
-.name {
-  font-size: 13px;
-  font-weight: 600;
-  margin-top: 4px;
-}
-
-.updated {
-  font-size: 11px;
-  color: #777;
-  margin-top: 2px;
-}
-
-select {
-  width: 100%;
-  font-size: 13px;
-  padding: 4px;
-}
-
-.info {
-  font-size: 11px;
-  color: #555;
-}
-
-.warn {
-  color: #ff9800;
-  animation: flash 1.2s infinite;
-}
-
-.expired {
-  color: #e53935;
-  font-weight: 600;
-}
+.warn { color:#ff9800; animation:flash 1.2s infinite; }
+.expired { color:#e53935; font-weight:600; }
 
 @keyframes flash {
-  0% { opacity:1; }
-  50% { opacity:.3; }
-  100% { opacity:1; }
+  0%{opacity:1} 50%{opacity:.3} 100%{opacity:1}
 }
 </style>
 </head>
@@ -105,57 +44,7 @@ select {
   <span onclick="signOut()">Sign out</span>
 </div>
 
-<!-- BIKE TEMPLATE -->
-<div class="card" id="bike1-card">
-  <div class="row">
-    <img src="click_redblack.png">
-    <div class="info" id="bike1-expiry"></div>
-  </div>
-  <div class="name">Honda Click</div>
-  <select onchange="attemptSave(1,this)">
-    <option value="Free">Free / ว่าง</option>
-    <option>Baan Mai / บ้านไม้</option>
-    <option>Baan Nam Lom / บ้านลมและน้ำ</option>
-    <option>Baan Mai Pai / บ้านไม้ไผ่</option>
-    <option>Baan Makham / บ้านมะขาม</option>
-    <option value="Unavailable">Unavailable / ไม่พร้อมใช้งาน</option>
-  </select>
-  <div class="updated" id="bike1-time"></div>
-</div>
-
-<div class="card" id="bike2-card">
-  <div class="row">
-    <img src="fazzio_darkgrey.png">
-    <div class="info" id="bike2-expiry"></div>
-  </div>
-  <div class="name">Yamaha Fazzio</div>
-  <select onchange="attemptSave(2,this)">
-    <option value="Free">Free / ว่าง</option>
-    <option>Baan Mai / บ้านไม้</option>
-    <option>Baan Nam Lom / บ้านลมและน้ำ</option>
-    <option>Baan Mai Pai / บ้านไม้ไผ่</option>
-    <option>Baan Makham / บ้านมะขาม</option>
-    <option value="Unavailable">Unavailable / ไม่พร้อมใช้งาน</option>
-  </select>
-  <div class="updated" id="bike2-time"></div>
-</div>
-
-<div class="card" id="bike3-card">
-  <div class="row">
-    <img src="fazzio_lightblue.png">
-    <div class="info" id="bike3-expiry"></div>
-  </div>
-  <div class="name">Yamaha Fazzio</div>
-  <select onchange="attemptSave(3,this)">
-    <option value="Free">Free / ว่าง</option>
-    <option>Baan Mai / บ้านไม้</option>
-    <option>Baan Nam Lom / บ้านลมและน้ำ</option>
-    <option>Baan Mai Pai / บ้านไม้ไผ่</option>
-    <option>Baan Makham / บ้านมะขาม</option>
-    <option value="Unavailable">Unavailable / ไม่พร้อมใช้งาน</option>
-  </select>
-  <div class="updated" id="bike3-time"></div>
-</div>
+<div id="bikes"></div>
 
 </div>
 
@@ -179,85 +68,106 @@ const db = firebase.firestore();
 
 const ADMIN_UID = "pK46rxDcvEVZEyktMvc8g2FaCoH2";
 
-function isAdmin() {
-  return auth.currentUser && auth.currentUser.uid === ADMIN_UID;
-}
+const bikes = [
+  { id:1, name:"Honda Click", img:"click_redblack.png" },
+  { id:2, name:"Yamaha Fazzio", img:"fazzio_darkgrey.png" },
+  { id:3, name:"Yamaha Fazzio", img:"fazzio_lightblue.png" }
+];
 
 auth.onAuthStateChanged(u=>{
   document.getElementById("username").innerText = u ? u.displayName : "—";
 });
 
-function signIn() {
-  auth.signInWithPopup(new firebase.auth.GoogleAuthProvider());
-}
-function signOut() { auth.signOut(); }
+function signIn(){ auth.signInWithPopup(new firebase.auth.GoogleAuthProvider()); }
+function signOut(){ auth.signOut(); }
 
-[1,2,3].forEach(i=>{
-  db.collection("bikes").doc("bike"+i).onSnapshot(doc=>{
+function isAdmin(){
+  return auth.currentUser && auth.currentUser.uid === ADMIN_UID;
+}
+
+function daysLeft(d){
+  return Math.ceil((new Date(d) - new Date()) / 86400000);
+}
+
+function expiryLine(label, field, val, bikeId){
+  const days = daysLeft(val);
+  let cls="", txt=val;
+
+  if(days < 0){ cls="expired"; txt="Expired"; }
+  else if(days <= 14){ cls="warn"; txt = days + " days"; }
+
+  if(isAdmin()){
+    return `<div class="${cls}">
+      ${label}: <input type="date" value="${val}"
+      onchange="updateExpiry('${bikeId}','${field}',this.value)">
+    </div>`;
+  }
+  return `<div class="${cls}">${label}: ${txt}</div>`;
+}
+
+function renderBike(b){
+  return `
+  <div class="card" id="bike${b.id}-card">
+    <div class="row">
+      <img src="${b.img}">
+      <div class="info" id="bike${b.id}-expiry"></div>
+    </div>
+    <div class="name">${b.name}</div>
+    <select onchange="saveStatus(${b.id},this.value)">
+      <option value="Free">Free / ว่าง</option>
+      <option>Baan Mai / บ้านไม้</option>
+      <option>Baan Nam Lom / บ้านลมและน้ำ</option>
+      <option>Baan Mai Pai / บ้านไม้ไผ่</option>
+      <option>Baan Makham / บ้านมะขาม</option>
+      <option value="Unavailable">Unavailable / ไม่พร้อมใช้งาน</option>
+    </select>
+    <div class="updated" id="bike${b.id}-time"></div>
+  </div>`;
+}
+
+document.getElementById("bikes").innerHTML =
+  bikes.map(renderBike).join("");
+
+bikes.forEach(b=>{
+  db.collection("bikes").doc("bike"+b.id).onSnapshot(doc=>{
     if(!doc.exists) return;
     const d = doc.data();
-    localStorage.setItem("bike"+i,d.status);
-    if(d.updatedAt?.toMillis)
-      localStorage.setItem("bike"+i+"_time",d.updatedAt.toMillis());
-    localStorage.setItem("bike"+i+"_by",d.updatedBy||"");
-    renderExpiry("bike"+i,d);
-    updateUI(i);
+
+    const card = document.getElementById("bike"+b.id+"-card");
+    const sel = card.querySelector("select");
+
+    sel.value = d.status;
+    card.classList.remove("free","assigned","unavailable");
+    if(d.status==="Free") card.classList.add("free");
+    else if(d.status==="Unavailable") card.classList.add("unavailable");
+    else card.classList.add("assigned");
+
+    if(d.updatedAt?.toMillis){
+      document.getElementById("bike"+b.id+"-time").innerText =
+        `Updated ${new Date(d.updatedAt.toMillis()).toLocaleString()} by ${d.updatedBy}`;
+    }
+
+    document.getElementById("bike"+b.id+"-expiry").innerHTML =
+      expiryLine("Tax","taxExpiry",d.taxExpiry,"bike"+b.id) +
+      expiryLine("Ins","insuranceExpiry",d.insuranceExpiry,"bike"+b.id);
   });
 });
 
-function attemptSave(id,el){
-  if(!auth.currentUser){ alert("Please sign in"); updateUI(id); return; }
+function saveStatus(id, val){
+  if(!auth.currentUser){
+    alert("Please sign in");
+    return;
+  }
   db.collection("bikes").doc("bike"+id).update({
-    status: el.value,
+    status: val,
     updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
     updatedBy: auth.currentUser.displayName
   });
 }
 
-function daysLeft(d){ return Math.ceil((new Date(d)-new Date())/86400000); }
-
-function expiryLine(label,field,val,bike){
-  const days=daysLeft(val);
-  let cls="",txt=val;
-  if(days<0){cls="expired";txt="Expired";}
-  else if(days<=14){cls="warn";txt=days+" days";}
-  if(isAdmin())
-    return `<div class="${cls}">${label}: <input type="date" value="${val}"
-      onchange="updateExpiry('${bike}','${field}',this.value)"></div>`;
-  return `<div class="${cls}">${label}: ${txt}</div>`;
-}
-
-function renderExpiry(bike,d){
-  document.getElementById(bike+"-expiry").innerHTML =
-    expiryLine("Tax","taxExpiry",d.taxExpiry,bike) +
-    expiryLine("Ins","insuranceExpiry",d.insuranceExpiry,bike);
-}
-
-function updateExpiry(bike,field,val){
+function updateExpiry(bikeId, field, val){
   if(!isAdmin()) return;
-  db.collection("bikes").doc(bike).update({[field]:val});
-}
-
-function timeAgo(ts){
-  const m=Math.floor((Date.now()-ts)/60000);
-  if(m<60) return m+" min ago";
-  if(m<1440) return Math.floor(m/60)+" h ago";
-  return new Date(ts).toLocaleDateString();
-}
-
-function updateUI(i){
-  const card=document.getElementById("bike"+i+"-card");
-  const sel=card.querySelector("select");
-  const v=localStorage.getItem("bike"+i)||"Free";
-  const ts=localStorage.getItem("bike"+i+"_time");
-  const by=localStorage.getItem("bike"+i+"_by");
-  sel.value=v;
-  card.classList.remove("free","assigned","unavailable");
-  if(v==="Free") card.classList.add("free");
-  else if(v==="Unavailable") card.classList.add("unavailable");
-  else card.classList.add("assigned");
-  card.querySelector(".updated").innerText =
-    ts ? `Updated ${timeAgo(Number(ts))} by ${by}` : "";
+  db.collection("bikes").doc(bikeId).update({ [field]: val });
 }
 </script>
 
