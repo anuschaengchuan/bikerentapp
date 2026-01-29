@@ -16,7 +16,8 @@ body { font-family:sans-serif; background:#f2f2f2; margin:0; padding:8px; }
 .logo { height:80px; }
 
 .right { display:flex; flex-direction:column; align-items:flex-end; gap:6px; }
-.lang-switch { cursor:pointer; font-size:13px; display:flex; gap:6px; }
+
+.lang-switch { cursor:pointer; display:flex; gap:6px; }
 .flag { font-size:20px; }
 
 .actions { display:flex; gap:8px; align-items:center; }
@@ -68,7 +69,6 @@ img.bike { width:130px; }
 .status-menu div {
   padding:6px;
   cursor:pointer;
-  background:#fff;
 }
 .status-menu div:hover { background:#eee; }
 
@@ -120,7 +120,7 @@ input.date {
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
 
 <script>
-/* ================= CONFIG ================= */
+/* ---------- FIREBASE ---------- */
 firebase.initializeApp({
   apiKey:"AIzaSyCqJ-LqV_hn06MhfweOTJGIDmIt5bIq2JI",
   authDomain:"baan-namsai-bikes.firebaseapp.com",
@@ -130,6 +130,7 @@ const auth = firebase.auth();
 const db = firebase.firestore();
 const ADMIN_UID = "pK46rxDcvEVZEyktMvc8g2FaCoH2";
 
+/* ---------- DATA ---------- */
 const bikes = [
   {id:1,name:"Honda Click",img:"click_redblack.png",plate:"1กต 8316"},
   {id:2,name:"Yamaha Fazzio",img:"fazzio_darkgrey.png",plate:"1กร 5287"},
@@ -140,7 +141,7 @@ let bikeData = {};
 let editMode = false;
 let openStatusMenu = null;
 
-/* ================= LANGUAGE ================= */
+/* ---------- LANGUAGE ---------- */
 let lang = localStorage.getItem("lang") || (navigator.language.startsWith("th")?"th":"en");
 
 const T = {
@@ -191,27 +192,27 @@ const T = {
 };
 
 function toggleLang(){
-  lang = lang==="en" ? "th" : "en";
+  lang = lang==="en"?"th":"en";
   localStorage.setItem("lang",lang);
   updateHeader();
   renderAll();
 }
 
 function updateHeader(){
-  langLabel.innerText = lang==="en" ? "ไทย" : "English";
-  langFlag.innerText  = lang==="en" ? "🇹🇭" : "🇬🇧";
-  loginBtn.innerText  = T[lang].login;
+  langLabel.innerText = lang==="en"?"ไทย":"English";
+  langFlag.innerText = lang==="en"?"🇹🇭":"🇬🇧";
+  loginBtn.innerText = T[lang].login;
   logoutBtn.innerText = T[lang].logout;
 }
 
-/* ================= AUTH ================= */
+/* ---------- AUTH ---------- */
 auth.onAuthStateChanged(user=>{
   if(user){
-    avatar.src = user.photoURL || "";
-    avatar.style.display = user.photoURL ? "block" : "none";
+    avatar.src=user.photoURL||"";
+    avatar.style.display=user.photoURL?"block":"none";
     loginBtn.style.display="none";
     logoutBtn.style.display="inline-block";
-    editBtn.style.display = user.uid===ADMIN_UID ? "inline-block" : "none";
+    editBtn.style.display=user.uid===ADMIN_UID?"inline-block":"none";
   } else {
     avatar.style.display="none";
     loginBtn.style.display="inline-block";
@@ -231,61 +232,75 @@ function toggleEdit(){
   renderAll();
 }
 
-/* ================= DATE HELPERS (FIXED) ================= */
-function parseDDMMYY(str){
-  if(!str || !/^\d{2}\/\d{2}\/\d{2}$/.test(str)) return null;
-  const [d,m,y] = str.split("/").map(Number);
-  return new Date(2000+y, m-1, d);
+/* ---------- DATE LOGIC (ROBUST) ---------- */
+function parseDateFlexible(str){
+  if(!str) return null;
+
+  if(/^\d{2}\/\d{2}\/\d{2}$/.test(str)){
+    const [d,m,y]=str.split("/").map(Number);
+    return new Date(2000+y,m-1,d);
+  }
+  if(/^\d{4}-\d{2}-\d{2}$/.test(str)){
+    const [y,m,d]=str.split("-").map(Number);
+    return new Date(y,m-1,d);
+  }
+  return null;
 }
 
 function formatDDMMYY(date){
   if(!date) return "";
-  return String(date.getDate()).padStart(2,"0") + "/" +
-         String(date.getMonth()+1).padStart(2,"0") + "/" +
-         String(date.getFullYear()).slice(-2);
+  return (
+    String(date.getDate()).padStart(2,"0")+"/"+
+    String(date.getMonth()+1).padStart(2,"0")+"/"+
+    String(date.getFullYear()).slice(-2)
+  );
 }
 
 function daysLeft(str){
-  const d = parseDDMMYY(str);
-  if(!d) return NaN;
-  return Math.ceil((d - new Date()) / 86400000);
+  const d=parseDateFlexible(str);
+  if(!d) return null;
+  return Math.ceil((d-new Date())/86400000);
 }
 
 function remaining(days){
-  if(isNaN(days)) return "";
-  if(days < 0) return T[lang].expired;
-  if(days <= 60) return days + " " + T[lang].days;
-  return Math.round(days/30) + " " + T[lang].months;
+  if(days===null) return "—";
+  if(days<0) return T[lang].expired;
+  if(days<=60) return days+" "+T[lang].days;
+  return Math.round(days/30)+" "+T[lang].months;
 }
 
 function timeAgo(ts){
-  const s = Math.floor((Date.now()-ts)/1000);
-  if(s < 3600) return Math.floor(s/60)+" "+T[lang].min;
-  if(s < 86400) return Math.floor(s/3600)+" "+T[lang].hour;
+  const s=Math.floor((Date.now()-ts)/1000);
+  if(s<3600) return Math.floor(s/60)+" "+T[lang].min;
+  if(s<86400) return Math.floor(s/3600)+" "+T[lang].hour;
   return Math.floor(s/86400)+" "+T[lang].day;
 }
 
-/* ================= RENDER ================= */
+/* ---------- RENDER ---------- */
+const bikesEl=document.getElementById("bikes");
+
 function renderAll(){
-  bikesEl.innerHTML = bikes.map(b=>renderBike(b)).join("");
+  bikesEl.innerHTML=bikes.map(b=>renderBike(b)).join("");
 }
 
 function renderBike(b){
-  const d = bikeData[b.id] || {};
-  const taxDays = daysLeft(d.taxExpiry);
-  const insDays = daysLeft(d.insuranceExpiry);
+  const d=bikeData[b.id]||{};
+  const taxDays=daysLeft(d.taxExpiry);
+  const insDays=daysLeft(d.insuranceExpiry);
 
-  function expiryLine(label, days){
+  function line(label,days){
     let cls="";
-    if(days < 0) cls="expired";
-    else if(days <= 14) cls="warn";
+    if(days!==null){
+      if(days<0) cls="expired";
+      else if(days<=14) cls="warn";
+    }
     return `<div class="${cls}">${label}: ${remaining(days)}</div>`;
   }
 
   const statusLabel =
-    d.status==="Free" ? T[lang].available :
-    d.status==="Unavailable" ? T[lang].unavailable :
-    T[lang].houses[d.status] || d.status;
+    d.status==="Free"?T[lang].available:
+    d.status==="Unavailable"?T[lang].unavailable:
+    T[lang].houses[d.status]||d.status;
 
   return `
   <div class="card ${d.status==='Free'?'free':d.status==='Unavailable'?'unavailable':'assigned'}">
@@ -294,22 +309,20 @@ function renderBike(b){
     <div class="row">
       <img src="${b.img}" class="bike">
       <div class="info">
-        ${editMode ? `
+        ${editMode?`
           <div>${T[lang].tax}:
-            <input class="date"
-              value="${d.taxExpiry||""}"
+            <input class="date" value="${formatDDMMYY(parseDateFlexible(d.taxExpiry))}"
               placeholder="DD/MM/YY"
               onchange="saveExpiry(${b.id},'taxExpiry',this.value)">
           </div>
           <div>${T[lang].insurance}:
-            <input class="date"
-              value="${d.insuranceExpiry||""}"
+            <input class="date" value="${formatDDMMYY(parseDateFlexible(d.insuranceExpiry))}"
               placeholder="DD/MM/YY"
               onchange="saveExpiry(${b.id},'insuranceExpiry',this.value)">
           </div>
-        ` : `
-          ${expiryLine(T[lang].tax, taxDays)}
-          ${expiryLine(T[lang].insurance, insDays)}
+        `:`
+          ${line(T[lang].tax,taxDays)}
+          ${line(T[lang].insurance,insDays)}
         `}
         <div>${T[lang].plate}: ${b.plate}</div>
       </div>
@@ -317,7 +330,7 @@ function renderBike(b){
 
     <div class="status-btn" onclick="toggleStatus(${b.id})">${statusLabel}</div>
 
-    ${openStatusMenu===b.id ? `
+    ${openStatusMenu===b.id?`
       <div class="status-menu">
         <div onclick="setStatus(${b.id},'Free')">${T[lang].available}</div>
         ${Object.keys(T[lang].houses).map(h=>`
@@ -325,50 +338,43 @@ function renderBike(b){
         `).join("")}
         <div onclick="setStatus(${b.id},'Unavailable')">${T[lang].unavailable}</div>
       </div>
-    ` : ""}
+    `:""}
 
     <div class="updated">
-      ${d.updatedAt ? `${timeAgo(d.updatedAt)} ${T[lang].by} ${d.updatedBy||""}` : ""}
+      ${d.updatedAt?`${timeAgo(d.updatedAt)} ${T[lang].by} ${d.updatedBy||""}`:""}
     </div>
   </div>`;
 }
 
-/* ================= FIRESTORE ================= */
-const bikesEl = document.getElementById("bikes");
-
+/* ---------- FIRESTORE ---------- */
 bikes.forEach(b=>{
   db.collection("bikes").doc("bike"+b.id).onSnapshot(doc=>{
     if(doc.exists){
-      const data = doc.data();
-      bikeData[b.id] = {
-        ...data,
-        updatedAt: data.updatedAt?.toMillis?.()
-      };
+      const data=doc.data();
+      bikeData[b.id]={...data,updatedAt:data.updatedAt?.toMillis?.()};
       renderAll();
     }
   });
 });
 
-/* ================= ACTIONS ================= */
+/* ---------- ACTIONS ---------- */
 function toggleStatus(id){
-  openStatusMenu = openStatusMenu===id ? null : id;
+  openStatusMenu=openStatusMenu===id?null:id;
   renderAll();
 }
-
 function setStatus(id,val){
   if(!auth.currentUser){ signIn(); return; }
-  openStatusMenu = null;
+  openStatusMenu=null;
   db.collection("bikes").doc("bike"+id).update({
-    status: val,
-    updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
-    updatedBy: auth.currentUser.displayName
+    status:val,
+    updatedAt:firebase.firestore.FieldValue.serverTimestamp(),
+    updatedBy:auth.currentUser.displayName
   });
 }
-
 function saveExpiry(id,field,val){
   if(!editMode) return;
   if(!/^\d{2}\/\d{2}\/\d{2}$/.test(val)) return;
-  db.collection("bikes").doc("bike"+id).update({[field]: val});
+  db.collection("bikes").doc("bike"+id).update({[field]:val});
 }
 
 /* INIT */
