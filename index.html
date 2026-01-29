@@ -17,6 +17,18 @@ body {
   margin: 0 auto;
 }
 
+.top {
+  text-align: right;
+  font-size: 11px;
+  color: #555;
+  margin-bottom: 6px;
+}
+
+.top span {
+  text-decoration: underline;
+  cursor: pointer;
+}
+
 .card {
   background: #fff;
   border-radius: 8px;
@@ -42,7 +54,7 @@ body {
 
 img {
   width: 100%;
-  max-width: 170px;
+  max-width: 160px;
   display: block;
   margin: 0 auto 4px;
 }
@@ -70,6 +82,10 @@ select {
 <body>
 
 <div class="app">
+
+<div class="top">
+  User: <strong id="username"></strong> · <span onclick="changeName()">Change</span>
+</div>
 
 <div class="card" id="bike1-card">
   <img src="click_redblack.png">
@@ -116,9 +132,25 @@ select {
 </div>
 
 <script>
+function askName() {
+  let name = localStorage.getItem("username");
+  if (!name) {
+    name = prompt("Enter your name:");
+    if (name) localStorage.setItem("username", name);
+  }
+  document.getElementById("username").innerText = name || "—";
+}
+
+function changeName() {
+  localStorage.removeItem("username");
+  askName();
+}
+
 function save(id, value) {
+  const user = localStorage.getItem("username") || "Unknown";
   localStorage.setItem("bike" + id, value);
   localStorage.setItem("bike" + id + "_time", Date.now());
+  localStorage.setItem("bike" + id + "_by", user);
   updateUI();
 }
 
@@ -135,6 +167,7 @@ function updateUI() {
     const select = card.querySelector("select");
     const value = localStorage.getItem("bike" + i) || "Free";
     const ts = localStorage.getItem("bike" + i + "_time");
+    const by = localStorage.getItem("bike" + i + "_by");
 
     select.value = value;
     card.classList.remove("free", "assigned", "unavailable");
@@ -144,10 +177,11 @@ function updateUI() {
     else card.classList.add("assigned");
 
     document.getElementById("bike" + i + "-time").innerText =
-      ts ? "Updated " + timeAgo(Number(ts)) : "";
+      ts ? `Updated ${timeAgo(Number(ts))} by ${by}` : "";
   }
 }
 
+askName();
 updateUI();
 setInterval(updateUI, 60000);
 </script>
