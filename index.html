@@ -31,6 +31,16 @@ select { width:100%; font-size:13px; padding:4px; }
 @keyframes flash {
   0%{opacity:1} 50%{opacity:.3} 100%{opacity:1}
 }
+
+.edit-btn {
+  font-size:11px;
+  padding:2px 6px;
+  border:1px solid #999;
+  border-radius:4px;
+  cursor:pointer;
+  background:#fff;
+}
+.edit-on { background:#ffecb3; border-color:#ff9800; }
 </style>
 </head>
 
@@ -42,6 +52,9 @@ select { width:100%; font-size:13px; padding:4px; }
   User: <strong id="username">—</strong>
   <span onclick="signIn()">Sign in</span>
   <span onclick="signOut()">Sign out</span>
+  <span id="editToggle" style="display:none">
+    · <button class="edit-btn" onclick="toggleEdit()">Edit</button>
+  </span>
 </div>
 
 <div id="bikes"></div>
@@ -67,6 +80,7 @@ const auth = firebase.auth();
 const db = firebase.firestore();
 
 const ADMIN_UID = "pK46rxDcvEVZEyktMvc8g2FaCoH2";
+let editMode = false;
 
 const bikes = [
   { id:1, name:"Honda Click", img:"click_redblack.png" },
@@ -76,27 +90,28 @@ const bikes = [
 
 auth.onAuthStateChanged(u=>{
   document.getElementById("username").innerText = u ? u.displayName : "—";
+  document.getElementById("editToggle").style.display =
+    (u && u.uid===ADMIN_UID) ? "inline" : "none";
 });
 
 function signIn(){ auth.signInWithPopup(new firebase.auth.GoogleAuthProvider()); }
-function signOut(){ auth.signOut(); }
+function signOut(){ editMode=false; auth.signOut(); }
 
-function isAdmin(){
-  return auth.currentUser && auth.currentUser.uid === ADMIN_UID;
+function toggleEdit(){
+  editMode = !editMode;
+  document.querySelector(".edit-btn").classList.toggle("edit-on", editMode);
 }
 
-function daysLeft(d){
-  return Math.ceil((new Date(d) - new Date()) / 86400000);
-}
+function daysLeft(d){ return Math.ceil((new Date(d)-new Date())/86400000); }
 
-function expiryLine(label, field, val, bikeId){
+function expiryLine(label,field,val,bikeId){
   const days = daysLeft(val);
   let cls="", txt=val;
 
-  if(days < 0){ cls="expired"; txt="Expired"; }
-  else if(days <= 14){ cls="warn"; txt = days + " days"; }
+  if(days<0){ cls="expired"; txt="Expired"; }
+  else if(days<=14){ cls="warn"; txt=days+" days"; }
 
-  if(isAdmin()){
+  if(editMode){
     return `<div class="${cls}">
       ${label}: <input type="date" value="${val}"
       onchange="updateExpiry('${bikeId}','${field}',this.value)">
@@ -153,21 +168,18 @@ bikes.forEach(b=>{
   });
 });
 
-function saveStatus(id, val){
-  if(!auth.currentUser){
-    alert("Please sign in");
-    return;
-  }
+function saveStatus(id,val){
+  if(!auth.currentUser){ alert("Please sign in"); return; }
   db.collection("bikes").doc("bike"+id).update({
-    status: val,
-    updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
-    updatedBy: auth.currentUser.displayName
+    status:val,
+    updatedAt:firebase.firestore.FieldValue.serverTimestamp(),
+    updatedBy:auth.currentUser.displayName
   });
 }
 
-function updateExpiry(bikeId, field, val){
-  if(!isAdmin()) return;
-  db.collection("bikes").doc(bikeId).update({ [field]: val });
+function updateExpiry(bikeId,field,val){
+  if(!editMode) return;
+  db.collection("bikes").doc(bikeId).update({ [field]:val });
 }
 </script>
 
