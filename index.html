@@ -22,24 +22,36 @@ body {
   align-items:center;
   justify-content:space-between;
   background:#fff;
-  padding:10px 12px;
+  padding:12px;
   border-radius:10px;
   margin-bottom:12px;
   box-shadow:0 1px 3px rgba(0,0,0,.08);
 }
 
 .logo {
-  height:90px;        /* slightly smaller */
+  height:80px;
   object-fit:contain;
 }
 
-/* ---------- USER / LANG ---------- */
+/* ---------- RIGHT ---------- */
 .right {
   display:flex;
   flex-direction:column;
   align-items:flex-end;
   gap:6px;
   font-size:12px;
+}
+
+.lang-switch {
+  display:flex;
+  align-items:center;
+  gap:6px;
+  cursor:pointer;
+  user-select:none;
+}
+
+.lang-switch span.flag {
+  font-size:20px;
 }
 
 .userline {
@@ -73,24 +85,6 @@ body {
 .btn.edit-on {
   background:#ffecb3;
   border-color:#ff9800;
-}
-
-/* ---------- LANG SWITCH ---------- */
-.lang {
-  display:flex;
-  gap:8px;
-}
-
-.lang-btn {
-  display:flex;
-  flex-direction:column;
-  align-items:center;
-  cursor:pointer;
-  font-size:10px;
-}
-
-.lang-btn span {
-  font-size:20px;
 }
 
 /* ---------- CARDS ---------- */
@@ -148,12 +142,6 @@ select {
 @keyframes flash {
   0%{opacity:1} 50%{opacity:.3} 100%{opacity:1}
 }
-
-input.date {
-  width:100%;
-  font-size:11px;
-  padding:2px;
-}
 </style>
 </head>
 
@@ -165,15 +153,9 @@ input.date {
   <img src="Logo.png" class="logo">
 
   <div class="right">
-    <div class="lang">
-      <div class="lang-btn" onclick="setLang('th')">
-        <span>🇹🇭</span>
-        <div>Thai</div>
-      </div>
-      <div class="lang-btn" onclick="setLang('en')">
-        <span>🇬🇧</span>
-        <div>English</div>
-      </div>
+    <div class="lang-switch" onclick="toggleLang()">
+      <span id="langText"></span>
+      <span class="flag" id="langFlag"></span>
     </div>
 
     <div class="userline">
@@ -198,15 +180,31 @@ input.date {
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
 
 <script>
-/* ---------------- LANGUAGE ---------------- */
-let lang = localStorage.getItem("lang") || "en";
-function setLang(l){
-  lang = l;
-  localStorage.setItem("lang", l);
-  rerenderAll();
+/* ---------- LANGUAGE ---------- */
+const browserLang = navigator.language.startsWith("th") ? "th" : "en";
+let lang = localStorage.getItem("lang") || browserLang;
+
+function toggleLang(){
+  lang = (lang === "en") ? "th" : "en";
+  localStorage.setItem("lang", lang);
+  updateLanguageUI();
+  updateAllText();
 }
 
-/* ---------------- TEXTS ---------------- */
+function updateLanguageUI(){
+  const text = document.getElementById("langText");
+  const flag = document.getElementById("langFlag");
+
+  if(lang === "en"){
+    text.innerText = "ไทย";
+    flag.innerText = "🇹🇭";
+  } else {
+    text.innerText = "English";
+    flag.innerText = "🇬🇧";
+  }
+}
+
+/* ---------- TEXTS ---------- */
 const T = {
   en: {
     free:"Free",
@@ -230,7 +228,7 @@ const T = {
   }
 };
 
-/* ---------------- FIREBASE ---------------- */
+/* ---------- FIREBASE ---------- */
 firebase.initializeApp({
   apiKey: "AIzaSyCqJ-LqV_hn06MhfweOTJGIDmIt5bIq2JI",
   authDomain: "baan-namsai-bikes.firebaseapp.com",
@@ -249,7 +247,7 @@ const bikes = [
   { id:3, name:"Yamaha Fazzio", img:"fazzio_lightblue.png", plate:"1กพ 2670" }
 ];
 
-/* ---------------- AUTH ---------------- */
+/* ---------- AUTH ---------- */
 auth.onAuthStateChanged(user=>{
   const avatar=document.getElementById("avatar");
   const loginBtn=document.getElementById("loginBtn");
@@ -281,7 +279,7 @@ auth.onAuthStateChanged(user=>{
 function signIn(){ auth.signInWithPopup(new firebase.auth.GoogleAuthProvider()); }
 function signOut(){ auth.signOut(); }
 
-/* ---------------- HELPERS ---------------- */
+/* ---------- HELPERS ---------- */
 function parseDate(str){
   if(!str) return null;
   if(str.includes("-")) return new Date(str+"T00:00:00");
@@ -307,53 +305,55 @@ function timeAgo(ts){
   return `${Math.floor(s/86400)} d · ${d.getDate().toString().padStart(2,"0")}/${(d.getMonth()+1).toString().padStart(2,"0")}/${d.getFullYear().toString().slice(-2)} ${d.getHours().toString().padStart(2,"0")}:${d.getMinutes().toString().padStart(2,"0")}`;
 }
 
-/* ---------------- UI ---------------- */
+/* ---------- UI ---------- */
 function toggleEdit(){
   editMode=!editMode;
   document.getElementById("editBtn").classList.toggle("edit-on",editMode);
-  rerenderAll();
+  updateAllText();
 }
 
-function renderBike(b){
-  return `
-  <div class="card" id="bike${b.id}-card">
-    <div class="row">
-      <img src="${b.img}" class="bike">
-      <div class="info" id="bike${b.id}-expiry"></div>
-    </div>
-    <div class="name">${b.name}</div>
-    <select onchange="saveStatus(${b.id},this.value)">
+function renderBikesOnce(){
+  document.getElementById("bikes").innerHTML =
+    bikes.map(b=>`
+      <div class="card" id="bike${b.id}-card">
+        <div class="row">
+          <img src="${b.img}" class="bike">
+          <div class="info" id="bike${b.id}-expiry"></div>
+        </div>
+        <div class="name">${b.name}</div>
+        <select id="bike${b.id}-select"></select>
+        <div class="updated" id="bike${b.id}-time"></div>
+      </div>
+    `).join("");
+}
+
+renderBikesOnce();
+
+function updateAllText(){
+  bikes.forEach(b=>{
+    const select=document.getElementById(`bike${b.id}-select`);
+    select.innerHTML=`
       <option value="Free">${T[lang].free}</option>
       <option>Baan Mai</option>
       <option>Baan Nam Lom</option>
       <option>Baan Mai Pai</option>
       <option>Baan Makham</option>
       <option value="Unavailable">${T[lang].unavailable}</option>
-    </select>
-    <div class="updated" id="bike${b.id}-time"></div>
-  </div>`;
+    `;
+    select.onchange=()=>saveStatus(b.id,select.value);
+  });
 }
 
-document.getElementById("bikes").innerHTML=bikes.map(renderBike).join("");
-
-function expiryBlock(bikeId,d,plate){
-  const taxDays=daysLeft(d.taxExpiry);
-  const insDays=daysLeft(d.insuranceExpiry);
-
-  return `
-    <div class="${taxDays<=14?'warn':''}">${T[lang].tax}: ${remaining(taxDays)}</div>
-    <div class="${insDays<=14?'warn':''}">${T[lang].insurance}: ${remaining(insDays)}</div>
-    <div>${T[lang].plate}: ${plate}</div>
-  `;
-}
+updateLanguageUI();
+updateAllText();
 
 bikes.forEach(b=>{
   db.collection("bikes").doc("bike"+b.id).onSnapshot(doc=>{
     if(!doc.exists) return;
     const d=doc.data();
 
-    const card=document.getElementById("bike"+b.id+"-card");
-    const sel=card.querySelector("select");
+    const card=document.getElementById(`bike${b.id}-card`);
+    const sel=document.getElementById(`bike${b.id}-select`);
 
     sel.value=d.status;
     card.classList.remove("free","assigned","unavailable");
@@ -362,18 +362,19 @@ bikes.forEach(b=>{
     else card.classList.add("assigned");
 
     if(d.updatedAt?.toMillis){
-      document.getElementById("bike"+b.id+"-time").innerText =
+      document.getElementById(`bike${b.id}-time`).innerText =
         timeAgo(d.updatedAt.toMillis())+(d.updatedBy?" by "+d.updatedBy:"");
     }
 
-    document.getElementById("bike"+b.id+"-expiry").innerHTML =
-      expiryBlock("bike"+b.id,d,b.plate);
+    document.getElementById(`bike${b.id}-expiry`).innerHTML = `
+      <div class="${daysLeft(d.taxExpiry)<=14?'warn':''}">${T[lang].tax}: ${remaining(daysLeft(d.taxExpiry))}</div>
+      <div class="${daysLeft(d.insuranceExpiry)<=14?'warn':''}">${T[lang].insurance}: ${remaining(daysLeft(d.insuranceExpiry))}</div>
+      <div>${T[lang].plate}: ${b.plate}</div>
+    `;
   });
 });
 
-function rerenderAll(){
-  document.getElementById("bikes").innerHTML=bikes.map(renderBike).join("");
-}
+/* ---------- SAVE ---------- */
 function saveStatus(id,val){
   if(!auth.currentUser){
     pendingStatus={id,value:val};
