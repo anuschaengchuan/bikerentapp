@@ -151,59 +151,50 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.firestore();
-
 </script>
 
 <script>
-let pendingChange = null;
-
 function signIn() {
   const provider = new firebase.auth.GoogleAuthProvider();
-  auth.signInWithPopup(provider);
+  auth.signInWithRedirect(provider);
 }
 
 function signOut() {
   auth.signOut();
-  localStorage.removeItem("username");
-  document.getElementById("username").innerText = "—";
 }
 
 auth.onAuthStateChanged(user => {
-  if (user) {
-    localStorage.setItem("username", user.displayName);
-    document.getElementById("username").innerText = user.displayName;
-  }
+  document.getElementById("username").innerText =
+    user ? user.displayName : "—";
+});
+
+// 🔄 LIVE SYNC FOR ALL BIKES
+[1,2,3].forEach(id => {
+  db.collection("bikes").doc("bike" + id).onSnapshot(doc => {
+    if (!doc.exists) return;
+    const data = doc.data();
+    localStorage.setItem("bike" + id, data.status);
+    if (data.updatedAt && data.updatedAt.toMillis) {
+      localStorage.setItem("bike" + id + "_time", data.updatedAt.toMillis());
+    }
+    localStorage.setItem("bike" + id + "_by", data.updatedBy || "");
+    updateUI();
+  });
 });
 
 function attemptSave(id, selectEl) {
-  const username = localStorage.getItem("username");
-  if (!username) {
-    pendingChange = { id, value: selectEl.value };
-    askName();
+  const user = auth.currentUser;
+  if (!user) {
+    alert("Please sign in with Google / กรุณาเข้าสู่ระบบด้วย Google");
     updateUI();
     return;
   }
-  save(id, selectEl.value);
-}
 
-function askName() {
-  let name = prompt("Enter your name / กรุณาใส่ชื่อของคุณ");
-  if (!name) return;
-  localStorage.setItem("username", name);
-  document.getElementById("username").innerText = name;
-
-  if (pendingChange) {
-    save(pendingChange.id, pendingChange.value);
-    pendingChange = null;
-  }
-}
-
-function save(id, value) {
-  const user = localStorage.getItem("username");
-  localStorage.setItem("bike" + id, value);
-  localStorage.setItem("bike" + id + "_time", Date.now());
-  localStorage.setItem("bike" + id + "_by", user);
-  updateUI();
+  db.collection("bikes").doc("bike" + id).set({
+    status: selectEl.value,
+    updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+    updatedBy: user.displayName
+  });
 }
 
 function timeAgo(ts) {
@@ -239,4 +230,3 @@ setInterval(updateUI, 60000);
 
 </body>
 </html>
-
