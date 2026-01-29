@@ -9,73 +9,58 @@ body {
   font-family:sans-serif;
   background:#f2f2f2;
   margin:0;
-  padding:10px;
+  padding:8px;
 }
 .app {
   max-width:360px;
   margin:0 auto;
 }
 
-/* ---------- HEADER ---------- */
-.header {
-  background:#fff;
-  border-radius:10px;
-  padding:14px;
-  margin-bottom:10px;
-  box-shadow:0 2px 4px rgba(0,0,0,.1);
+/* ---------- BRAND ---------- */
+.brand {
+  text-align:left;
+  padding:6px 4px 10px;
+}
+.brand img {
+  height:54px;   /* BIGGER LOGO */
 }
 
-.header-top {
+/* ---------- AUTH BAR ---------- */
+.authbar {
   display:flex;
-  justify-content:center;
-  margin-bottom:10px;
-}
-
-.logo {
-  height:72px; /* MUCH BIGGER */
-}
-
-.header-bottom {
-  display:flex;
-  justify-content:space-between;
   align-items:center;
+  justify-content:space-between;
+  background:#fff;
+  padding:8px 10px;
+  border-radius:8px;
+  margin-bottom:10px;
+  box-shadow:0 1px 3px rgba(0,0,0,.08);
 }
 
-.username {
+.user {
   font-size:12px;
-  color:#555;
+  color:#333;
 }
 
-/* ---------- AUTH BUTTONS ---------- */
-.auth-btn {
-  font-size:13px;
-  padding:6px 12px;
+.actions {
+  display:flex;
+  gap:6px;
+}
+
+.btn {
+  font-size:12px;
+  padding:4px 10px;
   border-radius:6px;
-  border:1px solid #333;
+  border:1px solid #bbb;
   background:#fff;
   cursor:pointer;
 }
 
-.auth-btn.login {
-  border-color:#1976d2;
-  color:#1976d2;
+.btn.primary {
+  background:#f5f5f5;
 }
 
-.auth-btn.logout {
-  border-color:#d32f2f;
-  color:#d32f2f;
-}
-
-.edit-btn {
-  font-size:12px;
-  padding:4px 8px;
-  border-radius:6px;
-  border:1px solid #999;
-  background:#fff;
-  cursor:pointer;
-}
-
-.edit-on {
+.btn.edit-on {
   background:#ffecb3;
   border-color:#ff9800;
 }
@@ -130,7 +115,7 @@ select {
 .info div { margin-bottom:6px; }
 
 .warn { color:#ff9800; animation:flash 1.2s infinite; }
-.expired { color:#e53935; font-weight:600; animation:none; }
+.expired { color:#e53935; font-weight:600; }
 
 @keyframes flash {
   0%{opacity:1} 50%{opacity:.3} 100%{opacity:1}
@@ -148,20 +133,20 @@ input.date {
 
 <div class="app">
 
-<!-- HEADER -->
-<div class="header">
-  <div class="header-top">
-    <img src="01 Logo_color.png" class="logo">
+<!-- BRAND -->
+<div class="brand">
+  <img src="01 Logo_color.png" alt="Logo">
+</div>
+
+<!-- AUTH -->
+<div class="authbar">
+  <div class="user">
+    User: <strong id="username">—</strong>
   </div>
-
-  <div class="header-bottom">
-    <div class="username" id="username">—</div>
-
-    <div>
-      <button id="loginBtn" class="auth-btn login" onclick="signIn()">Login</button>
-      <button id="logoutBtn" class="auth-btn logout" onclick="signOut()" style="display:none">Logout</button>
-      <button id="editBtn" class="edit-btn" onclick="toggleEdit()" style="display:none">Edit</button>
-    </div>
+  <div class="actions">
+    <button class="btn primary" onclick="signIn()">Login</button>
+    <button class="btn" onclick="signOut()">Logout</button>
+    <button id="editBtn" class="btn" onclick="toggleEdit()" style="display:none">Edit</button>
   </div>
 </div>
 
@@ -174,16 +159,19 @@ input.date {
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
 
 <script>
+/* FIREBASE */
 firebase.initializeApp({
   apiKey: "AIzaSyCqJ-LqV_hn06MhfweOTJGIDmIt5bIq2JI",
   authDomain: "baan-namsai-bikes.firebaseapp.com",
   projectId: "baan-namsai-bikes"
 });
-
 const auth = firebase.auth();
 const db = firebase.firestore();
 
+/* CONFIG */
 const ADMIN_UID = "pK46rxDcvEVZEyktMvc8g2FaCoH2";
+let editMode = false;
+let pendingStatus = null;
 
 const bikes = [
   { id:1, name:"Honda Click", img:"click_redblack.png", plate:"1กต 8316" },
@@ -191,21 +179,13 @@ const bikes = [
   { id:3, name:"Yamaha Fazzio blue", img:"fazzio_lightblue.png", plate:"1กพ 2670" }
 ];
 
-let editMode = false;
-let pendingStatus = null;
-
-/* ---------- AUTH ---------- */
+/* AUTH */
 auth.onAuthStateChanged(user=>{
   document.getElementById("username").innerText =
-    user ? user.displayName : "Guest";
+    user ? user.displayName : "—";
 
-  document.getElementById("loginBtn").style.display =
-    user ? "none" : "inline-block";
-
-  document.getElementById("logoutBtn").style.display =
-    user ? "inline-block" : "none";
-
-  document.getElementById("editBtn").style.display =
+  const editBtn = document.getElementById("editBtn");
+  editBtn.style.display =
     (user && user.uid === ADMIN_UID) ? "inline-block" : "none";
 
   if(user && pendingStatus){
@@ -223,7 +203,34 @@ function signOut(){
   document.getElementById("editBtn").classList.remove("edit-on");
 }
 
-/* ---------- UI ---------- */
+/* DATE HELPERS */
+function parseDate(str){
+  if(!str) return null;
+  if(str.includes("-")) return new Date(str+"T00:00:00");
+  const [d,m,y] = str.split("/").map(Number);
+  return new Date(2000+y, m-1, d);
+}
+function daysLeft(str){
+  const d = parseDate(str);
+  if(!d) return NaN;
+  return Math.ceil((d - new Date())/86400000);
+}
+function remaining(days){
+  if(isNaN(days)) return "";
+  if(days<0) return "Expired / หมดอายุ";
+  if(days<=14) return days+" days / วัน";
+  if(days<60) return days+" days / วัน";
+  return Math.round(days/30)+" months / เดือน";
+}
+function timeAgo(ts){
+  const s = Math.floor((Date.now()-ts)/1000);
+  if(s<3600) return Math.floor(s/60)+" min ago";
+  if(s<86400) return Math.floor(s/3600)+" h ago";
+  const d = new Date(ts);
+  return `${Math.floor(s/86400)} d ago · ${String(d.getDate()).padStart(2,"0")}/${String(d.getMonth()+1).padStart(2,"0")}/${String(d.getFullYear()).slice(-2)} ${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}`;
+}
+
+/* UI */
 function toggleEdit(){
   editMode = !editMode;
   document.getElementById("editBtn").classList.toggle("edit-on", editMode);
@@ -253,49 +260,29 @@ function renderBike(b){
 document.getElementById("bikes").innerHTML =
   bikes.map(renderBike).join("");
 
-/* ---------- DATA ---------- */
-function parseDate(str){
-  if(!str) return null;
-  const p = str.replace(/-/g,"/").split("/");
-  if(p.length!==3) return null;
-  let [d,m,y]=p.map(Number);
-  if(y<100) y+=2000;
-  return new Date(y,m-1,d);
-}
-function daysLeft(str){
-  const d=parseDate(str);
-  return d ? Math.ceil((d-new Date())/86400000) : NaN;
-}
-function remaining(days){
-  if(isNaN(days)) return "";
-  if(days<0) return "Expired / หมดอายุ";
-  return days+" days / วัน";
-}
-function timeAgo(ts){
-  const s=Math.floor((Date.now()-ts)/1000);
-  if(s<3600) return Math.floor(s/60)+" min ago";
-  if(s<86400) return Math.floor(s/3600)+" h ago";
-  return Math.floor(s/86400)+" d ago";
-}
+function expiryBlock(bikeId,d,plate){
+  const taxDays = daysLeft(d.taxExpiry);
+  const insDays = daysLeft(d.insuranceExpiry);
 
-function expiryBlock(id,d,plate){
-  const t=daysLeft(d.taxExpiry);
-  const i=daysLeft(d.insuranceExpiry);
+  function line(label,field,days,value){
+    let cls="";
+    if(days<0) cls="expired";
+    else if(days<=14) cls="warn";
 
-  function line(label,field,days,val){
-    let cls=days<0?"expired":days<=14?"warn":"";
     if(editMode){
+      const dt=parseDate(value);
+      const v=dt?`${String(dt.getDate()).padStart(2,"0")}/${String(dt.getMonth()+1).padStart(2,"0")}/${String(dt.getFullYear()).slice(-2)}`:"";
       return `<div class="${cls}">
-        ${label}: <input class="date" value="${val||""}"
-        onchange="updateExpiry('${id}','${field}',this.value)">
+        ${label}: <input class="date" value="${v}"
+        onchange="updateExpiry('${bikeId}','${field}',this.value)">
       </div>`;
     }
     return `<div class="${cls}">${label}: ${remaining(days)}</div>`;
   }
 
   return `
-    ${line("Tax / ภาษี","taxExpiry",t,d.taxExpiry)}
-    ${line("Insurance / ประกัน","insuranceExpiry",i,d.insuranceExpiry)}
+    ${line("Tax / ภาษี","taxExpiry",taxDays,d.taxExpiry)}
+    ${line("Insurance / ประกัน","insuranceExpiry",insDays,d.insuranceExpiry)}
     <div>Plate / ทะเบียน: ${plate}</div>
   `;
 }
@@ -304,18 +291,20 @@ bikes.forEach(b=>{
   db.collection("bikes").doc("bike"+b.id).onSnapshot(doc=>{
     if(!doc.exists) return;
     const d=doc.data();
-    const card=document.getElementById("bike"+b.id+"-card");
 
+    const card=document.getElementById("bike"+b.id+"-card");
+    const sel=card.querySelector("select");
+
+    sel.value=d.status;
     card.classList.remove("free","assigned","unavailable");
     if(d.status==="Free") card.classList.add("free");
     else if(d.status==="Unavailable") card.classList.add("unavailable");
     else card.classList.add("assigned");
 
-    card.querySelector("select").value=d.status;
-
     if(d.updatedAt?.toMillis){
       document.getElementById("bike"+b.id+"-time").innerText =
-        "Updated "+timeAgo(d.updatedAt.toMillis());
+        "Updated "+timeAgo(d.updatedAt.toMillis())+
+        (d.updatedBy?" by "+d.updatedBy:"");
     }
 
     document.getElementById("bike"+b.id+"-expiry").innerHTML =
@@ -334,22 +323,25 @@ function rerenderAll(){
   });
 }
 
-/* ---------- SAVE ---------- */
+/* SAVE */
 function saveStatus(id,val){
   if(!auth.currentUser){
     pendingStatus={id,value:val};
     signIn();
     return;
   }
+  applyStatus(id,val);
+}
+function applyStatus(id,val){
   db.collection("bikes").doc("bike"+id).update({
     status:val,
     updatedAt:firebase.firestore.FieldValue.serverTimestamp(),
     updatedBy:auth.currentUser.displayName
   });
 }
-function updateExpiry(id,field,val){
+function updateExpiry(bikeId,field,val){
   if(!editMode) return;
-  db.collection("bikes").doc(id).update({[field]:val});
+  db.collection("bikes").doc(bikeId).update({[field]:val});
 }
 </script>
 
