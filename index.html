@@ -152,13 +152,6 @@ firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.firestore();
 
-/* 🔑 REQUIRED FOR GITHUB PAGES REDIRECT LOGIN */
-auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
-
-auth.getRedirectResult()
-  .then(() => {})
-  .catch(err => console.error("Redirect error:", err));
-
 auth.onAuthStateChanged(user => {
   document.getElementById("username").innerText =
     user ? user.displayName : "—";
@@ -180,7 +173,10 @@ auth.onAuthStateChanged(user => {
 
 function signIn() {
   const provider = new firebase.auth.GoogleAuthProvider();
-  auth.signInWithRedirect(provider);
+  auth.signInWithPopup(provider).catch(err => {
+    alert("Google login failed");
+    console.error(err);
+  });
 }
 
 function signOut() {
