@@ -22,14 +22,14 @@ body {
   align-items:center;
   justify-content:space-between;
   background:#fff;
-  padding:6px 10px;
+  padding:8px 12px;
   border-radius:8px;
   margin-bottom:8px;
   box-shadow:0 1px 3px rgba(0,0,0,.08);
 }
 
 .logo {
-  height:26px;
+  height:44px; /* BIGGER LOGO */
 }
 
 .userbar {
@@ -131,8 +131,8 @@ input.date {
   <img src="01 Logo_color.png" class="logo">
   <div class="userbar">
     <span id="username">—</span>
-    <span class="action" onclick="signIn()">Login</span>
-    <span class="action" onclick="signOut()">Logout</span>
+    <span id="loginBtn" class="action" onclick="signIn()">Login</span>
+    <span id="logoutBtn" class="action" onclick="signOut()" style="display:none">Logout</span>
     <button id="editBtn" class="edit-btn" onclick="toggleEdit()" style="display:none">Edit</button>
   </div>
 </div>
@@ -172,6 +172,12 @@ let pendingStatus = null;
 auth.onAuthStateChanged(user=>{
   document.getElementById("username").innerText =
     user ? user.displayName : "—";
+
+  document.getElementById("loginBtn").style.display =
+    user ? "none" : "inline";
+
+  document.getElementById("logoutBtn").style.display =
+    user ? "inline" : "none";
 
   document.getElementById("editBtn").style.display =
     (user && user.uid === ADMIN_UID) ? "inline-block" : "none";
@@ -258,12 +264,8 @@ function expiryBlock(bikeId, d, plate){
     else if(days <= 14) cls = "warn";
 
     if(editMode){
-      const dt = parseDate(value);
-      const v = dt
-        ? `${String(dt.getDate()).padStart(2,"0")}/${String(dt.getMonth()+1).padStart(2,"0")}/${String(dt.getFullYear()).slice(-2)}`
-        : "";
       return `<div class="${cls}">
-        ${label}: <input class="date" value="${v}"
+        ${label}: <input class="date" value="${value || ""}"
         onchange="updateExpiry('${bikeId}','${field}',this.value)">
       </div>`;
     }
