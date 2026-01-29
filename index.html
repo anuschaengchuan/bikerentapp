@@ -29,6 +29,7 @@ body {
   cursor: pointer;
 }
 
+/* Cards */
 .card {
   background: #fff;
   border-radius: 8px;
@@ -62,7 +63,6 @@ img {
 .name {
   font-size: 13px;
   font-weight: 600;
-  margin-bottom: 2px;
 }
 
 .updated {
@@ -76,10 +76,60 @@ select {
   font-size: 13px;
   padding: 4px;
 }
+
+/* Name modal */
+.modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.4);
+  display: none;
+  align-items: center;
+  justify-content: center;
+}
+
+.modal-box {
+  background: #fff;
+  padding: 16px;
+  border-radius: 10px;
+  width: 90%;
+  max-width: 280px;
+  text-align: center;
+}
+
+.modal-box h3 {
+  margin: 0 0 8px;
+  font-size: 14px;
+}
+
+.modal-box input {
+  width: 100%;
+  padding: 8px;
+  font-size: 14px;
+  margin-bottom: 10px;
+}
+
+.modal-box button {
+  width: 100%;
+  padding: 8px;
+  font-size: 14px;
+  border: none;
+  background: #4caf50;
+  color: white;
+  border-radius: 6px;
+}
 </style>
 </head>
 
 <body>
+
+<!-- Name Modal -->
+<div class="modal" id="nameModal">
+  <div class="modal-box">
+    <h3>Enter your name<br>กรุณาใส่ชื่อของคุณ</h3>
+    <input id="nameInput" placeholder="Name / ชื่อ">
+    <button onclick="saveName()">OK</button>
+  </div>
+</div>
 
 <div class="app">
 
@@ -132,18 +182,21 @@ select {
 </div>
 
 <script>
-function askName() {
-  let name = localStorage.getItem("username");
-  if (!name) {
-    name = prompt("Enter your name / กรุณาใส่ชื่อของคุณ");
-    if (name) localStorage.setItem("username", name);
-  }
-  document.getElementById("username").innerText = name || "—";
+function showNameModal() {
+  document.getElementById("nameModal").style.display = "flex";
+}
+
+function saveName() {
+  const name = document.getElementById("nameInput").value.trim();
+  if (!name) return;
+  localStorage.setItem("username", name);
+  document.getElementById("username").innerText = name;
+  document.getElementById("nameModal").style.display = "none";
 }
 
 function changeName() {
   localStorage.removeItem("username");
-  askName();
+  showNameModal();
 }
 
 function save(id, value) {
@@ -165,26 +218,4 @@ function updateUI() {
   for (let i = 1; i <= 3; i++) {
     const card = document.getElementById("bike" + i + "-card");
     const select = card.querySelector("select");
-    const value = localStorage.getItem("bike" + i) || "Free";
-    const ts = localStorage.getItem("bike" + i + "_time");
-    const by = localStorage.getItem("bike" + i + "_by");
-
-    select.value = value;
-    card.classList.remove("free", "assigned", "unavailable");
-
-    if (value === "Free") card.classList.add("free");
-    else if (value === "Unavailable") card.classList.add("unavailable");
-    else card.classList.add("assigned");
-
-    document.getElementById("bike" + i + "-time").innerText =
-      ts ? `Updated ${timeAgo(Number(ts))} by ${by}` : "";
-  }
-}
-
-askName();
-updateUI();
-setInterval(updateUI, 60000);
-</script>
-
-</body>
-</html>
+    const value = localStorage.getItem("bike" + i) ||
