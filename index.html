@@ -9,20 +9,20 @@ body {
   font-family: sans-serif;
   background: #f2f2f2;
   margin: 0;
-  padding: 12px;
+  padding: 8px;
 }
 
 .app {
-  max-width: 380px;
+  max-width: 360px;
   margin: 0 auto;
 }
 
 .card {
   background: #fff;
-  border-radius: 10px;
-  padding: 10px;
-  margin-bottom: 10px;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+  border-radius: 8px;
+  padding: 8px;
+  margin-bottom: 8px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
   border: 2px solid transparent;
 }
 
@@ -35,34 +35,34 @@ body {
   border-color: #e53935;
 }
 
+.card.service {
+  background: #fff3e0;
+  border-color: #fb8c00;
+}
+
 img {
   width: 100%;
-  max-width: 200px;
+  max-width: 170px;
   display: block;
-  margin: 0 auto 6px;
+  margin: 0 auto 4px;
 }
 
 .name {
+  font-size: 13px;
   font-weight: 600;
-  font-size: 14px;
-}
-
-.meta {
-  font-size: 12px;
-  color: #666;
-  margin-bottom: 4px;
+  margin-bottom: 2px;
 }
 
 .updated {
   font-size: 11px;
-  color: #888;
-  margin-top: 4px;
+  color: #777;
+  margin-top: 2px;
 }
 
 select {
   width: 100%;
-  font-size: 14px;
-  padding: 6px;
+  font-size: 13px;
+  padding: 4px;
 }
 </style>
 </head>
@@ -74,13 +74,13 @@ select {
 <div class="card" id="bike1-card">
   <img src="click_redblack.png">
   <div class="name">Honda Click 125</div>
-  <div class="meta">Red / Black</div>
   <select onchange="save(1,this.value)">
-    <option value="Free">Free</option>
+    <option value="Free">Free / ว่าง</option>
     <option>Baan Mai</option>
     <option>Baan Mai Pai</option>
     <option>Baan Nam Lom</option>
     <option>Baan Makham</option>
+    <option value="Service">Repair / Service / ซ่อม</option>
   </select>
   <div class="updated" id="bike1-time"></div>
 </div>
@@ -88,13 +88,13 @@ select {
 <div class="card" id="bike2-card">
   <img src="fazzio_darkgrey.png">
   <div class="name">Yamaha Fazzio</div>
-  <div class="meta">Dark Grey</div>
   <select onchange="save(2,this.value)">
-    <option value="Free">Free</option>
+    <option value="Free">Free / ว่าง</option>
     <option>Baan Mai</option>
     <option>Baan Mai Pai</option>
     <option>Baan Nam Lom</option>
     <option>Baan Makham</option>
+    <option value="Service">Repair / Service / ซ่อม</option>
   </select>
   <div class="updated" id="bike2-time"></div>
 </div>
@@ -102,13 +102,13 @@ select {
 <div class="card" id="bike3-card">
   <img src="fazzio_lightblue.png">
   <div class="name">Yamaha Fazzio</div>
-  <div class="meta">Light Blue</div>
   <select onchange="save(3,this.value)">
-    <option value="Free">Free</option>
+    <option value="Free">Free / ว่าง</option>
     <option>Baan Mai</option>
     <option>Baan Mai Pai</option>
     <option>Baan Nam Lom</option>
     <option>Baan Makham</option>
+    <option value="Service">Repair / Service / ซ่อม</option>
   </select>
   <div class="updated" id="bike3-time"></div>
 </div>
@@ -123,14 +123,10 @@ function save(id, value) {
 }
 
 function timeAgo(ts) {
-  if (!ts) return "";
-  const diff = Math.floor((Date.now() - ts) / 60000); // minutes
-
-  if (diff < 60) return diff + " min ago";
-  if (diff < 1440) return Math.floor(diff / 60) + " h ago";
-
-  const d = new Date(ts);
-  return d.toLocaleDateString();
+  const mins = Math.floor((Date.now() - ts) / 60000);
+  if (mins < 60) return mins + " min ago";
+  if (mins < 1440) return Math.floor(mins / 60) + " h ago";
+  return new Date(ts).toLocaleDateString();
 }
 
 function updateUI() {
@@ -141,9 +137,10 @@ function updateUI() {
     const ts = localStorage.getItem("bike" + i + "_time");
 
     select.value = value;
-    card.classList.remove("free", "assigned");
+    card.classList.remove("free", "assigned", "service");
 
     if (value === "Free") card.classList.add("free");
+    else if (value === "Service") card.classList.add("service");
     else card.classList.add("assigned");
 
     document.getElementById("bike" + i + "-time").innerText =
@@ -152,9 +149,8 @@ function updateUI() {
 }
 
 updateUI();
-setInterval(updateUI, 60000); // refresh time text every minute
+setInterval(updateUI, 60000);
 </script>
 
 </body>
 </html>
-
