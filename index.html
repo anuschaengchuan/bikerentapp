@@ -19,20 +19,13 @@ body { font-family:sans-serif; background:#f2f2f2; margin:0; padding:8px; }
 .right { display:flex; flex-direction:column; align-items:flex-end; gap:6px; }
 
 .lang-switch {
-  cursor:pointer;
-  display:flex;
-  align-items:center;
-  gap:6px;
-  font-size:13px;
+  cursor:pointer; display:flex; align-items:center; gap:6px; font-size:13px;
 }
 .flag { font-size:20px; }
 
 .actions { display:flex; gap:8px; align-items:center; }
 
-.avatar {
-  width:32px; height:32px; border-radius:50%;
-  display:none;
-}
+.avatar { width:32px; height:32px; border-radius:50%; display:none; }
 
 .btn {
   padding:7px 16px; font-size:13px;
@@ -59,7 +52,7 @@ img.bike { width:130px; }
 .info { font-size:11px; color:#555; line-height:1.6; }
 .info div { margin-bottom:6px; }
 
-/* STATUS BUTTON (FIXED HEIGHT) */
+/* STATUS BUTTON */
 .status-btn {
   margin-top:8px;
   min-height:38px;
@@ -67,7 +60,6 @@ img.bike { width:130px; }
   align-items:center;
   justify-content:center;
   font-weight:700;
-  text-align:center;
   border-radius:6px;
   border:1px solid #999;
   cursor:pointer;
@@ -88,11 +80,7 @@ img.bike { width:130px; }
 
 .updated { font-size:11px; color:#777; margin-top:4px; }
 
-input.date {
-  width:100%;
-  font-size:11px;
-  padding:2px;
-}
+input.date { width:100%; font-size:11px; padding:2px; }
 
 .warn { color:#ff9800; animation:flash 1.2s infinite; }
 .expired { color:#e53935; font-weight:600; }
@@ -151,124 +139,47 @@ const bikes = [
   {id:3,name:"Yamaha Fazzio",img:"fazzio_lightblue.png",plate:"1กพ 2670"}
 ];
 
-let bikeData = {};
-let editMode = false;
-let openStatusMenu = null;
+/* defaults = instant render */
+let bikeData = JSON.parse(localStorage.getItem("bikeCache")) || {
+  1:{status:"Free"},
+  2:{status:"Free"},
+  3:{status:"Free"}
+};
+
+let editMode=false;
+let openStatusMenu=null;
 
 /* ================= LANGUAGE ================= */
 let lang = localStorage.getItem("lang") || (navigator.language.startsWith("th")?"th":"en");
 
 const T = {
-  en:{
-    available:"Available",
-    unavailable:"Unavailable",
-    tax:"Tax",
-    insurance:"Insurance",
-    plate:"Plate",
-    expired:"Expired",
-    days:"days",
-    months:"months",
-    login:"Login",
-    logout:"Logout",
-    by:"by",
-    min:"min ago",
-    hour:"h ago",
-    day:"d ago",
-    houses:{
-      "Baan Mai":"Baan Mai",
-      "Baan Nam Lom":"Baan Nam Lom",
-      "Baan Mai Pai":"Baan Mai Pai",
-      "Baan Makham":"Baan Makham"
-    }
-  },
-  th:{
-    available:"ว่าง",
-    unavailable:"ไม่พร้อมใช้งาน",
-    tax:"ภาษี",
-    insurance:"ประกัน",
-    plate:"ทะเบียน",
-    expired:"หมดอายุ",
-    days:"วัน",
-    months:"เดือน",
-    login:"เข้าสู่ระบบ",
-    logout:"ออกจากระบบ",
-    by:"โดย",
-    min:"นาทีที่แล้ว",
-    hour:"ชั่วโมงที่แล้ว",
-    day:"วันที่แล้ว",
-    houses:{
-      "Baan Mai":"บ้านไม้",
-      "Baan Nam Lom":"บ้านลมและน้ำ",
-      "Baan Mai Pai":"บ้านไม้ไผ่",
-      "Baan Makham":"บ้านมะขาม"
-    }
-  }
+  en:{ available:"Available", unavailable:"Unavailable", tax:"Tax", insurance:"Insurance",
+    plate:"Plate", expired:"Expired", days:"days", months:"months",
+    login:"Login", logout:"Logout", by:"by", min:"min ago", hour:"h ago", day:"d ago",
+    houses:{ "Baan Mai":"Baan Mai","Baan Nam Lom":"Baan Nam Lom","Baan Mai Pai":"Baan Mai Pai","Baan Makham":"Baan Makham" } },
+  th:{ available:"ว่าง", unavailable:"ไม่พร้อมใช้งาน", tax:"ภาษี", insurance:"ประกัน",
+    plate:"ทะเบียน", expired:"หมดอายุ", days:"วัน", months:"เดือน",
+    login:"เข้าสู่ระบบ", logout:"ออกจากระบบ", by:"โดย", min:"นาทีที่แล้ว", hour:"ชั่วโมงที่แล้ว", day:"วันที่แล้ว",
+    houses:{ "Baan Mai":"บ้านไม้","Baan Nam Lom":"บ้านลมและน้ำ","Baan Mai Pai":"บ้านไม้ไผ่","Baan Makham":"บ้านมะขาม" } }
 };
 
-function toggleLang(){
-  lang = lang==="en"?"th":"en";
-  localStorage.setItem("lang",lang);
-  updateHeader();
-  renderAll();
-}
-
-function updateHeader(){
-  langLabel.innerText = lang==="en"?"ไทย":"English";
-  langFlag.innerText  = lang==="en"?"🇹🇭":"🇬🇧";
-  loginBtn.innerText  = T[lang].login;
-  logoutBtn.innerText = T[lang].logout;
-}
-
-/* ================= AUTH ================= */
-auth.onAuthStateChanged(user=>{
-  if(user){
-    avatar.src=user.photoURL||"";
-    avatar.style.display=user.photoURL?"block":"none";
-    loginBtn.style.display="none";
-    logoutBtn.style.display="inline-block";
-    editBtn.style.display=user.uid===ADMIN_UID?"inline-block":"none";
-  } else {
-    avatar.style.display="none";
-    loginBtn.style.display="inline-block";
-    logoutBtn.style.display="none";
-    editBtn.style.display="none";
-    editMode=false;
-  }
-  updateHeader();
-});
-
-function signIn(){ auth.signInWithPopup(new firebase.auth.GoogleAuthProvider()); }
-function signOut(){ auth.signOut(); }
-
-function toggleEdit(){
-  editMode=!editMode;
-  editBtn.classList.toggle("edit-on",editMode);
-  renderAll();
-}
-
-/* ================= DATE HELPERS ================= */
+/* ================= HELPERS ================= */
 function parseDate(str){
-  if(!str) return null;
-  if(/^\d{2}\/\d{2}\/\d{2}$/.test(str)){
-    const [d,m,y]=str.split("/").map(Number);
-    return new Date(2000+y,m-1,d);
-  }
-  return null;
+  if(!str || !/^\d{2}\/\d{2}\/\d{2}$/.test(str)) return null;
+  const [d,m,y]=str.split("/").map(Number);
+  return new Date(2000+y,m-1,d);
 }
-
 function daysLeft(str){
   const d=parseDate(str);
   if(!d) return null;
   return Math.ceil((d-new Date())/86400000);
 }
-
 function remaining(days){
   if(days===null) return "—";
   if(days<0) return T[lang].expired;
   if(days<=60) return days+" "+T[lang].days;
   return Math.round(days/30)+" "+T[lang].months;
 }
-
 function timeAgo(ts){
   const s=Math.floor((Date.now()-ts)/1000);
   if(s<3600) return Math.floor(s/60)+" "+T[lang].min;
@@ -280,24 +191,11 @@ function timeAgo(ts){
 const bikesEl=document.getElementById("bikes");
 
 function renderAll(){
-  bikesEl.innerHTML = bikes.map(b=>{
-    return bikeData[b.id] ? renderBike(b) : renderLoading(b);
-  }).join("");
-}
-
-function renderLoading(b){
-  return `
-    <div class="card">
-      <div class="name">${b.name}</div>
-      <div style="padding:20px;text-align:center;color:#999;font-size:12px">
-        Loading…
-      </div>
-    </div>
-  `;
+  bikesEl.innerHTML=bikes.map(b=>renderBike(b)).join("");
 }
 
 function renderBike(b){
-  const d=bikeData[b.id];
+  const d=bikeData[b.id]||{};
   const taxDays=daysLeft(d.taxExpiry);
   const insDays=daysLeft(d.insuranceExpiry);
 
@@ -318,15 +216,12 @@ function renderBike(b){
   return `
   <div class="card ${d.status==='Free'?'free':d.status==='Unavailable'?'unavailable':'assigned'}">
     <div class="name">${b.name}</div>
-
     <div class="row">
       <img src="${b.img}" class="bike">
       <div class="info">
         ${editMode?`
-          <div>${T[lang].tax}: <input class="date" value="${d.taxExpiry||""}"
-            onchange="saveExpiry(${b.id},'taxExpiry',this.value)"></div>
-          <div>${T[lang].insurance}: <input class="date" value="${d.insuranceExpiry||""}"
-            onchange="saveExpiry(${b.id},'insuranceExpiry',this.value)"></div>
+          <div>${T[lang].tax}: <input class="date" value="${d.taxExpiry||""}" onchange="saveExpiry(${b.id},'taxExpiry',this.value)"></div>
+          <div>${T[lang].insurance}: <input class="date" value="${d.insuranceExpiry||""}" onchange="saveExpiry(${b.id},'insuranceExpiry',this.value)"></div>
         `:`
           ${line(T[lang].tax,taxDays)}
           ${line(T[lang].insurance,insDays)}
@@ -340,16 +235,11 @@ function renderBike(b){
     ${openStatusMenu===b.id?`
       <div class="status-menu">
         <div onclick="setStatus(${b.id},'Free')">${T[lang].available}</div>
-        ${Object.keys(T[lang].houses).map(h=>`
-          <div onclick="setStatus(${b.id},'${h}')">${T[lang].houses[h]}</div>
-        `).join("")}
+        ${Object.keys(T[lang].houses).map(h=>`<div onclick="setStatus(${b.id},'${h}')">${T[lang].houses[h]}</div>`).join("")}
         <div onclick="setStatus(${b.id},'Unavailable')">${T[lang].unavailable}</div>
-      </div>
-    `:""}
+      </div>`:""}
 
-    <div class="updated">
-      ${d.updatedAt?`${timeAgo(d.updatedAt)} ${T[lang].by} ${d.updatedBy||""}`:""}
-    </div>
+    <div class="updated">${d.updatedAt?`${timeAgo(d.updatedAt)} ${T[lang].by} ${d.updatedBy||""}`:""}</div>
   </div>`;
 }
 
@@ -357,32 +247,40 @@ function renderBike(b){
 bikes.forEach(b=>{
   db.collection("bikes").doc("bike"+b.id).onSnapshot(doc=>{
     if(doc.exists){
-      const data=doc.data();
-      bikeData[b.id]={...data,updatedAt:data.updatedAt?.toMillis?.()};
+      bikeData[b.id]={...bikeData[b.id],...doc.data(),updatedAt:doc.data().updatedAt?.toMillis?.()};
+      localStorage.setItem("bikeCache",JSON.stringify(bikeData));
       renderAll();
     }
   });
 });
 
+/* ================= AUTH ================= */
+auth.onAuthStateChanged(user=>{
+  if(user){
+    avatar.src=user.photoURL||"";
+    avatar.style.display=user.photoURL?"block":"none";
+    loginBtn.style.display="none";
+    logoutBtn.style.display="inline-block";
+    editBtn.style.display=user.uid===ADMIN_UID?"inline-block":"none";
+  } else {
+    avatar.style.display="none";
+    loginBtn.style.display="inline-block";
+    logoutBtn.style.display="none";
+    editBtn.style.display="none";
+    editMode=false;
+  }
+  updateHeader();
+});
+
 /* ================= ACTIONS ================= */
-function toggleStatus(id){
-  openStatusMenu=openStatusMenu===id?null:id;
-  renderAll();
-}
-function setStatus(id,val){
-  if(!auth.currentUser){ signIn(); return; }
-  openStatusMenu=null;
-  db.collection("bikes").doc("bike"+id).update({
-    status:val,
-    updatedAt:firebase.firestore.FieldValue.serverTimestamp(),
-    updatedBy:auth.currentUser.displayName
-  });
-}
-function saveExpiry(id,field,val){
-  if(!editMode) return;
-  if(!/^\d{2}\/\d{2}\/\d{2}$/.test(val)) return;
-  db.collection("bikes").doc("bike"+id).update({[field]:val});
-}
+function signIn(){ auth.signInWithPopup(new firebase.auth.GoogleAuthProvider()); }
+function signOut(){ auth.signOut(); }
+function toggleEdit(){ editMode=!editMode; editBtn.classList.toggle("edit-on",editMode); renderAll(); }
+function toggleLang(){ lang=lang==="en"?"th":"en"; localStorage.setItem("lang",lang); updateHeader(); renderAll(); }
+function updateHeader(){ langLabel.innerText=lang==="en"?"ไทย":"English"; langFlag.innerText=lang==="en"?"🇹🇭":"🇬🇧"; loginBtn.innerText=T[lang].login; logoutBtn.innerText=T[lang].logout; }
+function toggleStatus(id){ openStatusMenu=openStatusMenu===id?null:id; renderAll(); }
+function setStatus(id,val){ if(!auth.currentUser){signIn();return;} openStatusMenu=null; db.collection("bikes").doc("bike"+id).update({status:val,updatedAt:firebase.firestore.FieldValue.serverTimestamp(),updatedBy:auth.currentUser.displayName}); }
+function saveExpiry(id,field,val){ if(!editMode||!/^\d{2}\/\d{2}\/\d{2}$/.test(val))return; db.collection("bikes").doc("bike"+id).update({[field]:val}); }
 
 /* INIT */
 updateHeader();
