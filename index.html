@@ -27,6 +27,7 @@ body {
 .top span {
   text-decoration: underline;
   cursor: pointer;
+  margin-left: 6px;
 }
 
 .card {
@@ -83,7 +84,9 @@ select {
 <div class="app">
 
 <div class="top">
-  User: <strong id="username">—</strong> · <span onclick="changeName()">Change</span>
+  User: <strong id="username">—</strong>
+  <span onclick="signIn()">Sign in</span>
+  <span onclick="signOut()">Sign out</span>
 </div>
 
 <div class="card" id="bike1-card">
@@ -130,15 +133,51 @@ select {
 
 </div>
 
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyCqJ-LqV_hn06MhfweOTJGIDmIt5bIq2JI",
+  authDomain: "baan-namsai-bikes.firebaseapp.com",
+  projectId: "baan-namsai-bikes",
+  storageBucket: "baan-namsai-bikes.firebasestorage.app",
+  messagingSenderId: "25012885530",
+  appId: "1:25012885530:web:112e1ec9855473d6d399a3"
+};
+
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+</script>
+
 <script>
 let pendingChange = null;
+
+function signIn() {
+  const provider = new firebase.auth.GoogleAuthProvider();
+  auth.signInWithPopup(provider);
+}
+
+function signOut() {
+  auth.signOut();
+  localStorage.removeItem("username");
+  document.getElementById("username").innerText = "—";
+}
+
+auth.onAuthStateChanged(user => {
+  if (user) {
+    localStorage.setItem("username", user.displayName);
+    document.getElementById("username").innerText = user.displayName;
+  }
+});
 
 function attemptSave(id, selectEl) {
   const username = localStorage.getItem("username");
   if (!username) {
     pendingChange = { id, value: selectEl.value };
     askName();
-    updateUI(); // revert visual change
+    updateUI();
     return;
   }
   save(id, selectEl.value);
@@ -154,11 +193,6 @@ function askName() {
     save(pendingChange.id, pendingChange.value);
     pendingChange = null;
   }
-}
-
-function changeName() {
-  localStorage.removeItem("username");
-  document.getElementById("username").innerText = "—";
 }
 
 function save(id, value) {
@@ -195,9 +229,6 @@ function updateUI() {
       ts ? `Updated ${timeAgo(Number(ts))} by ${by}` : "";
   }
 }
-
-const storedName = localStorage.getItem("username");
-if (storedName) document.getElementById("username").innerText = storedName;
 
 updateUI();
 setInterval(updateUI, 60000);
