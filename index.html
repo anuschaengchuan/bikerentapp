@@ -151,11 +151,33 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.firestore();
-auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
-  
-</script>
 
-<script>
+/* 🔑 REQUIRED FOR GITHUB PAGES REDIRECT LOGIN */
+auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
+
+auth.getRedirectResult()
+  .then(() => {})
+  .catch(err => console.error("Redirect error:", err));
+
+auth.onAuthStateChanged(user => {
+  document.getElementById("username").innerText =
+    user ? user.displayName : "—";
+});
+
+/* 🔄 LIVE SYNC */
+[1,2,3].forEach(id => {
+  db.collection("bikes").doc("bike" + id).onSnapshot(doc => {
+    if (!doc.exists) return;
+    const d = doc.data();
+    localStorage.setItem("bike" + id, d.status);
+    if (d.updatedAt?.toMillis) {
+      localStorage.setItem("bike" + id + "_time", d.updatedAt.toMillis());
+    }
+    localStorage.setItem("bike" + id + "_by", d.updatedBy || "");
+    updateUI();
+  });
+});
+
 function signIn() {
   const provider = new firebase.auth.GoogleAuthProvider();
   auth.signInWithRedirect(provider);
@@ -164,25 +186,6 @@ function signIn() {
 function signOut() {
   auth.signOut();
 }
-
-auth.onAuthStateChanged(user => {
-  document.getElementById("username").innerText =
-    user ? user.displayName : "—";
-});
-
-// 🔄 LIVE SYNC FOR ALL BIKES
-[1,2,3].forEach(id => {
-  db.collection("bikes").doc("bike" + id).onSnapshot(doc => {
-    if (!doc.exists) return;
-    const data = doc.data();
-    localStorage.setItem("bike" + id, data.status);
-    if (data.updatedAt && data.updatedAt.toMillis) {
-      localStorage.setItem("bike" + id + "_time", data.updatedAt.toMillis());
-    }
-    localStorage.setItem("bike" + id + "_by", data.updatedBy || "");
-    updateUI();
-  });
-});
 
 function attemptSave(id, selectEl) {
   const user = auth.currentUser;
@@ -215,7 +218,7 @@ function updateUI() {
     const by = localStorage.getItem("bike" + i + "_by");
 
     select.value = value;
-    card.classList.remove("free", "assigned", "unavailable");
+    card.classList.remove("free","assigned","unavailable");
 
     if (value === "Free") card.classList.add("free");
     else if (value === "Unavailable") card.classList.add("unavailable");
@@ -232,4 +235,3 @@ setInterval(updateUI, 60000);
 
 </body>
 </html>
-
