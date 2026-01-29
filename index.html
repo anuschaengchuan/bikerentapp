@@ -16,7 +16,7 @@ body {
   margin:0 auto;
 }
 
-/* ---------- TOP HEADER ---------- */
+/* ---------- HEADER ---------- */
 .header {
   display:flex;
   align-items:center;
@@ -24,17 +24,17 @@ body {
   background:#fff;
   padding:10px 12px;
   border-radius:10px;
-  margin-bottom:14px;
+  margin-bottom:12px;
   box-shadow:0 1px 3px rgba(0,0,0,.08);
 }
 
 .logo {
-  height:120px;          /* VERY BIG LOGO */
-  max-width:60%;
+  height:90px;        /* slightly smaller */
   object-fit:contain;
 }
 
-.userbar {
+/* ---------- USER / LANG ---------- */
+.right {
   display:flex;
   flex-direction:column;
   align-items:flex-end;
@@ -70,13 +70,27 @@ body {
   cursor:pointer;
 }
 
-.btn.primary {
-  background:#f5f5f5;
-}
-
 .btn.edit-on {
   background:#ffecb3;
   border-color:#ff9800;
+}
+
+/* ---------- LANG SWITCH ---------- */
+.lang {
+  display:flex;
+  gap:8px;
+}
+
+.lang-btn {
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  cursor:pointer;
+  font-size:10px;
+}
+
+.lang-btn span {
+  font-size:20px;
 }
 
 /* ---------- CARDS ---------- */
@@ -147,17 +161,28 @@ input.date {
 
 <div class="app">
 
-<!-- HEADER -->
 <div class="header">
-  <img src="Logo.png" class="logo" alt="Logo">
+  <img src="Logo.png" class="logo">
 
-  <div class="userbar">
+  <div class="right">
+    <div class="lang">
+      <div class="lang-btn" onclick="setLang('th')">
+        <span>🇹🇭</span>
+        <div>Thai</div>
+      </div>
+      <div class="lang-btn" onclick="setLang('en')">
+        <span>🇬🇧</span>
+        <div>English</div>
+      </div>
+    </div>
+
     <div class="userline">
       <img id="avatar" class="avatar">
       <strong id="username">—</strong>
     </div>
+
     <div class="actions">
-      <button id="loginBtn" class="btn primary" onclick="signIn()">Login</button>
+      <button id="loginBtn" class="btn" onclick="signIn()">Login</button>
       <button id="logoutBtn" class="btn" onclick="signOut()" style="display:none">Logout</button>
       <button id="editBtn" class="btn" onclick="toggleEdit()" style="display:none">Edit</button>
     </div>
@@ -173,7 +198,39 @@ input.date {
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
 
 <script>
-/* FIREBASE */
+/* ---------------- LANGUAGE ---------------- */
+let lang = localStorage.getItem("lang") || "en";
+function setLang(l){
+  lang = l;
+  localStorage.setItem("lang", l);
+  rerenderAll();
+}
+
+/* ---------------- TEXTS ---------------- */
+const T = {
+  en: {
+    free:"Free",
+    unavailable:"Unavailable",
+    tax:"Tax",
+    insurance:"Insurance",
+    plate:"Plate",
+    expired:"Expired",
+    days:"days",
+    months:"months"
+  },
+  th: {
+    free:"ว่าง",
+    unavailable:"ไม่พร้อมใช้งาน",
+    tax:"ภาษี",
+    insurance:"ประกัน",
+    plate:"ทะเบียน",
+    expired:"หมดอายุ",
+    days:"วัน",
+    months:"เดือน"
+  }
+};
+
+/* ---------------- FIREBASE ---------------- */
 firebase.initializeApp({
   apiKey: "AIzaSyCqJ-LqV_hn06MhfweOTJGIDmIt5bIq2JI",
   authDomain: "baan-namsai-bikes.firebaseapp.com",
@@ -182,64 +239,54 @@ firebase.initializeApp({
 const auth = firebase.auth();
 const db = firebase.firestore();
 
-/* CONFIG */
 const ADMIN_UID = "pK46rxDcvEVZEyktMvc8g2FaCoH2";
 let editMode = false;
 let pendingStatus = null;
 
 const bikes = [
   { id:1, name:"Honda Click", img:"click_redblack.png", plate:"1กต 8316" },
-  { id:2, name:"Yamaha Fazzio grey", img:"fazzio_darkgrey.png", plate:"1กร 5287" },
-  { id:3, name:"Yamaha Fazzio blue", img:"fazzio_lightblue.png", plate:"1กพ 2670" }
+  { id:2, name:"Yamaha Fazzio", img:"fazzio_darkgrey.png", plate:"1กร 5287" },
+  { id:3, name:"Yamaha Fazzio", img:"fazzio_lightblue.png", plate:"1กพ 2670" }
 ];
 
-/* AUTH */
+/* ---------------- AUTH ---------------- */
 auth.onAuthStateChanged(user=>{
-  const avatar = document.getElementById("avatar");
-  const username = document.getElementById("username");
-  const loginBtn = document.getElementById("loginBtn");
-  const logoutBtn = document.getElementById("logoutBtn");
-  const editBtn = document.getElementById("editBtn");
+  const avatar=document.getElementById("avatar");
+  const loginBtn=document.getElementById("loginBtn");
+  const logoutBtn=document.getElementById("logoutBtn");
+  const editBtn=document.getElementById("editBtn");
 
   if(user){
-    username.innerText = user.displayName || "User";
-    avatar.src = user.photoURL || "";
-    avatar.style.display = user.photoURL ? "block" : "none";
-    loginBtn.style.display = "none";
-    logoutBtn.style.display = "inline-block";
-    editBtn.style.display = (user.uid === ADMIN_UID) ? "inline-block" : "none";
+    document.getElementById("username").innerText=user.displayName;
+    avatar.src=user.photoURL||"";
+    avatar.style.display=user.photoURL?"block":"none";
+    loginBtn.style.display="none";
+    logoutBtn.style.display="inline-block";
+    editBtn.style.display=(user.uid===ADMIN_UID)?"inline-block":"none";
 
     if(pendingStatus){
-      applyStatus(pendingStatus.id, pendingStatus.value);
-      pendingStatus = null;
+      applyStatus(pendingStatus.id,pendingStatus.value);
+      pendingStatus=null;
     }
   } else {
-    username.innerText = "—";
-    avatar.style.display = "none";
-    loginBtn.style.display = "inline-block";
-    logoutBtn.style.display = "none";
-    editBtn.style.display = "none";
-    editMode = false;
-    editBtn.classList.remove("edit-on");
+    document.getElementById("username").innerText="—";
+    avatar.style.display="none";
+    loginBtn.style.display="inline-block";
+    logoutBtn.style.display="none";
+    editBtn.style.display="none";
+    editMode=false;
   }
 });
 
-/* AUTH ACTIONS */
-function signIn(){
-  auth.signInWithPopup(new firebase.auth.GoogleAuthProvider());
-}
-function signOut(){
-  auth.signOut();
-}
+function signIn(){ auth.signInWithPopup(new firebase.auth.GoogleAuthProvider()); }
+function signOut(){ auth.signOut(); }
 
-/* ---------- EVERYTHING BELOW UNCHANGED ---------- */
-/* (dates, rendering, Firestore sync, edit mode, etc.) */
-
+/* ---------------- HELPERS ---------------- */
 function parseDate(str){
   if(!str) return null;
   if(str.includes("-")) return new Date(str+"T00:00:00");
-  const [d,m,y] = str.split("/").map(Number);
-  return new Date(2000+y, m-1, d);
+  const [d,m,y]=str.split("/").map(Number);
+  return new Date(2000+y,m-1,d);
 }
 function daysLeft(str){
   const d=parseDate(str);
@@ -248,19 +295,19 @@ function daysLeft(str){
 }
 function remaining(days){
   if(isNaN(days)) return "";
-  if(days<0) return "Expired / หมดอายุ";
-  if(days<=14) return days+" days / วัน";
-  if(days<60) return days+" days / วัน";
-  return Math.round(days/30)+" months / เดือน";
+  if(days<0) return T[lang].expired;
+  if(days<60) return days+" "+T[lang].days;
+  return Math.round(days/30)+" "+T[lang].months;
 }
 function timeAgo(ts){
   const s=Math.floor((Date.now()-ts)/1000);
   if(s<3600) return Math.floor(s/60)+" min ago";
   if(s<86400) return Math.floor(s/3600)+" h ago";
   const d=new Date(ts);
-  return `${Math.floor(s/86400)} d ago · ${String(d.getDate()).padStart(2,"0")}/${String(d.getMonth()+1).padStart(2,"0")}/${String(d.getFullYear()).slice(-2)} ${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}`;
+  return `${Math.floor(s/86400)} d · ${d.getDate().toString().padStart(2,"0")}/${(d.getMonth()+1).toString().padStart(2,"0")}/${d.getFullYear().toString().slice(-2)} ${d.getHours().toString().padStart(2,"0")}:${d.getMinutes().toString().padStart(2,"0")}`;
 }
 
+/* ---------------- UI ---------------- */
 function toggleEdit(){
   editMode=!editMode;
   document.getElementById("editBtn").classList.toggle("edit-on",editMode);
@@ -276,12 +323,12 @@ function renderBike(b){
     </div>
     <div class="name">${b.name}</div>
     <select onchange="saveStatus(${b.id},this.value)">
-      <option value="Free">Free / ว่าง</option>
-      <option>Baan Mai / บ้านไม้</option>
-      <option>Baan Nam Lom / บ้านลมและน้ำ</option>
-      <option>Baan Mai Pai / บ้านไม้ไผ่</option>
-      <option>Baan Makham / บ้านมะขาม</option>
-      <option value="Unavailable">Unavailable / ไม่พร้อมใช้งาน</option>
+      <option value="Free">${T[lang].free}</option>
+      <option>Baan Mai</option>
+      <option>Baan Nam Lom</option>
+      <option>Baan Mai Pai</option>
+      <option>Baan Makham</option>
+      <option value="Unavailable">${T[lang].unavailable}</option>
     </select>
     <div class="updated" id="bike${b.id}-time"></div>
   </div>`;
@@ -292,22 +339,11 @@ document.getElementById("bikes").innerHTML=bikes.map(renderBike).join("");
 function expiryBlock(bikeId,d,plate){
   const taxDays=daysLeft(d.taxExpiry);
   const insDays=daysLeft(d.insuranceExpiry);
-  function line(label,field,days,value){
-    let cls="";
-    if(days<0) cls="expired";
-    else if(days<=14) cls="warn";
-    if(editMode){
-      const dt=parseDate(value);
-      const v=dt?`${String(dt.getDate()).padStart(2,"0")}/${String(dt.getMonth()+1).padStart(2,"0")}/${String(dt.getFullYear()).slice(-2)}`:"";
-      return `<div class="${cls}">${label}: <input class="date" value="${v}"
-      onchange="updateExpiry('${bikeId}','${field}',this.value)"></div>`;
-    }
-    return `<div class="${cls}">${label}: ${remaining(days)}</div>`;
-  }
+
   return `
-    ${line("Tax / ภาษี","taxExpiry",taxDays,d.taxExpiry)}
-    ${line("Insurance / ประกัน","insuranceExpiry",insDays,d.insuranceExpiry)}
-    <div>Plate / ทะเบียน: ${plate}</div>
+    <div class="${taxDays<=14?'warn':''}">${T[lang].tax}: ${remaining(taxDays)}</div>
+    <div class="${insDays<=14?'warn':''}">${T[lang].insurance}: ${remaining(insDays)}</div>
+    <div>${T[lang].plate}: ${plate}</div>
   `;
 }
 
@@ -315,8 +351,10 @@ bikes.forEach(b=>{
   db.collection("bikes").doc("bike"+b.id).onSnapshot(doc=>{
     if(!doc.exists) return;
     const d=doc.data();
+
     const card=document.getElementById("bike"+b.id+"-card");
     const sel=card.querySelector("select");
+
     sel.value=d.status;
     card.classList.remove("free","assigned","unavailable");
     if(d.status==="Free") card.classList.add("free");
@@ -324,31 +362,22 @@ bikes.forEach(b=>{
     else card.classList.add("assigned");
 
     if(d.updatedAt?.toMillis){
-      document.getElementById("bike"+b.id+"-time").innerText=
-        "Updated "+timeAgo(d.updatedAt.toMillis())+
-        (d.updatedBy?" by "+d.updatedBy:"");
+      document.getElementById("bike"+b.id+"-time").innerText =
+        timeAgo(d.updatedAt.toMillis())+(d.updatedBy?" by "+d.updatedBy:"");
     }
-    document.getElementById("bike"+b.id+"-expiry").innerHTML=
+
+    document.getElementById("bike"+b.id+"-expiry").innerHTML =
       expiryBlock("bike"+b.id,d,b.plate);
   });
 });
 
 function rerenderAll(){
-  bikes.forEach(b=>{
-    db.collection("bikes").doc("bike"+b.id).get().then(doc=>{
-      if(doc.exists){
-        document.getElementById("bike"+b.id+"-expiry").innerHTML=
-          expiryBlock("bike"+b.id,doc.data(),b.plate);
-      }
-    });
-  });
+  document.getElementById("bikes").innerHTML=bikes.map(renderBike).join("");
 }
-
 function saveStatus(id,val){
   if(!auth.currentUser){
     pendingStatus={id,value:val};
-    signIn();
-    return;
+    signIn(); return;
   }
   applyStatus(id,val);
 }
@@ -359,12 +388,7 @@ function applyStatus(id,val){
     updatedBy:auth.currentUser.displayName
   });
 }
-function updateExpiry(bikeId,field,val){
-  if(!editMode) return;
-  db.collection("bikes").doc(bikeId).update({[field]:val});
-}
 </script>
 
 </body>
 </html>
-
