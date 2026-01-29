@@ -125,6 +125,7 @@ firebase.initializeApp({
   projectId:"baan-namsai-bikes"
 });
 const auth = firebase.auth();
+auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
 const db = firebase.firestore();
 const ADMIN_UID = "pK46rxDcvEVZEyktMvc8g2FaCoH2";
 
