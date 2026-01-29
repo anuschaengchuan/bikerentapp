@@ -125,18 +125,11 @@ firebase.initializeApp({
   projectId:"baan-namsai-bikes"
 });
 const auth = firebase.auth();
-auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
 const db = firebase.firestore();
 const ADMIN_UID = "pK46rxDcvEVZEyktMvc8g2FaCoH2";
 
 // Enable offline persistence (works with spotty WiFi)
-db.enablePersistence().catch(err => {
-  if (err.code === 'failed-precondition') {
-    console.log('Multiple tabs open, persistence only works in one tab');
-  } else if (err.code === 'unimplemented') {
-    console.log('Browser does not support offline mode');
-  }
-});
+db.enablePersistence().catch(err => console.log('Offline mode unavailable'));
 
 /* ================= DATA with CACHE ================= */
 const bikes = [
@@ -210,7 +203,7 @@ function renderAll(){
 }
 
 function renderBike(b){
-  const d=bikeData[b.id]||{status:"Free"};
+  const d=bikeData[b.id];
   const taxDays=daysLeft(d.taxExpiry);
   const insDays=daysLeft(d.insuranceExpiry);
 
@@ -232,7 +225,7 @@ function renderBike(b){
   <div class="card ${d.status==='Free'?'free':d.status==='Unavailable'?'unavailable':'assigned'}">
     <div class="name">${b.name}</div>
     <div class="row">
-      <img src="${b.img}" class="bike" onerror="this.style.display='none'">
+      <img src="${b.img}" class="bike">
       <div class="info">
         ${editMode?`
           <div>${T[lang].tax}: <input class="date" value="${d.taxExpiry||""}"
@@ -305,11 +298,6 @@ if(cachedUser){
   editBtn.style.display = "none";
 }
 
-// Handle redirect result (for mobile/desktop sign-in)
-auth.getRedirectResult().catch(err => {
-  console.error("Sign in failed:", err);
-});
-
 // Authoritative sync from Firebase
 auth.onAuthStateChanged(user=>{
   if(user){
@@ -335,33 +323,12 @@ auth.onAuthStateChanged(user=>{
 });
 
 /* ================= ACTIONS ================= */
-function signIn(){ 
-  auth.signInWithRedirect(new firebase.auth.GoogleAuthProvider()); 
-}
-function signOut(){ 
-  auth.signOut(); 
-}
-function toggleEdit(){ 
-  editMode=!editMode; 
-  editBtn.classList.toggle("edit-on",editMode); 
-  renderAll(); 
-}
-function toggleLang(){ 
-  lang=lang==="en"?"th":"en"; 
-  localStorage.setItem("lang",lang); 
-  updateHeader(); 
-  renderAll(); 
-}
-function updateHeader(){ 
-  document.getElementById("langLabel").innerText=lang==="en"?"ไทย":"English"; 
-  document.getElementById("langFlag").innerText=lang==="en"?"🇹🇭":"🇬🇧"; 
-  loginBtn.innerText=T[lang].login; 
-  logoutBtn.innerText=T[lang].logout; 
-}
-function toggleStatus(id){ 
-  openStatusMenu=openStatusMenu===id?null:id; 
-  renderAll(); 
-}
+function signIn(){ auth.signInWithPopup(new firebase.auth.GoogleAuthProvider()); }
+function signOut(){ auth.signOut(); }
+function toggleEdit(){ editMode=!editMode; editBtn.classList.toggle("edit-on",editMode); renderAll(); }
+function toggleLang(){ lang=lang==="en"?"th":"en"; localStorage.setItem("lang",lang); updateHeader(); renderAll(); }
+function updateHeader(){ langLabel.innerText=lang==="en"?"ไทย":"English"; langFlag.innerText=lang==="en"?"🇹🇭":"🇬🇧"; loginBtn.innerText=T[lang].login; logoutBtn.innerText=T[lang].logout; }
+function toggleStatus(id){ openStatusMenu=openStatusMenu===id?null:id; renderAll(); }
 
 function setStatus(id,val){
   if(!auth.currentUser){signIn();return;}
@@ -377,8 +344,6 @@ function setStatus(id,val){
         updatedBy:auth.currentUser.displayName
       });
     });
-  }).catch(err => {
-    console.error("Failed to update status:", err);
   });
 }
 
