@@ -35,9 +35,9 @@ body {
   border-color: #e53935;
 }
 
-.card.service {
-  background: #fff3e0;
-  border-color: #fb8c00;
+.card.unavailable {
+  background: #eeeeee;
+  border-color: #9e9e9e;
 }
 
 img {
@@ -76,11 +76,11 @@ select {
   <div class="name">Honda Click 125</div>
   <select onchange="save(1,this.value)">
     <option value="Free">Free / ว่าง</option>
-    <option>Baan Mai / บ้านใหม่</option>
+    <option>Baan Mai / บ้านไม้</option>
+    <option>Baan Nam Lom / บ้านลมและน้ำ</option>
     <option>Baan Mai Pai / บ้านไม้ไผ่</option>
-    <option>Baan Nam Lom / บ้านน้ำลม</option>
     <option>Baan Makham / บ้านมะขาม</option>
-    <option value="Service">Repair / Service / ซ่อม</option>
+    <option value="Unavailable">Unavailable / ไม่พร้อมใช้งาน</option>
   </select>
   <div class="updated" id="bike1-time"></div>
 </div>
@@ -90,11 +90,11 @@ select {
   <div class="name">Yamaha Fazzio</div>
   <select onchange="save(2,this.value)">
     <option value="Free">Free / ว่าง</option>
-    <option>Baan Mai / บ้านใหม่</option>
+    <option>Baan Mai / บ้านไม้</option>
+    <option>Baan Nam Lom / บ้านลมและน้ำ</option>
     <option>Baan Mai Pai / บ้านไม้ไผ่</option>
-    <option>Baan Nam Lom / บ้านน้ำลม</option>
     <option>Baan Makham / บ้านมะขาม</option>
-    <option value="Service">Repair / Service / ซ่อม</option>
+    <option value="Unavailable">Unavailable / ไม่พร้อมใช้งาน</option>
   </select>
   <div class="updated" id="bike2-time"></div>
 </div>
@@ -104,11 +104,11 @@ select {
   <div class="name">Yamaha Fazzio</div>
   <select onchange="save(3,this.value)">
     <option value="Free">Free / ว่าง</option>
-    <option>Baan Mai / บ้านใหม่</option>
+    <option>Baan Mai / บ้านไม้</option>
+    <option>Baan Nam Lom / บ้านลมและน้ำ</option>
     <option>Baan Mai Pai / บ้านไม้ไผ่</option>
-    <option>Baan Nam Lom / บ้านน้ำลม</option>
     <option>Baan Makham / บ้านมะขาม</option>
-    <option value="Service">Repair / Service / ซ่อม</option>
+    <option value="Unavailable">Unavailable / ไม่พร้อมใช้งาน</option>
   </select>
   <div class="updated" id="bike3-time"></div>
 </div>
@@ -137,10 +137,10 @@ function updateUI() {
     const ts = localStorage.getItem("bike" + i + "_time");
 
     select.value = value;
-    card.classList.remove("free", "assigned", "service");
+    card.classList.remove("free", "assigned", "unavailable");
 
     if (value === "Free") card.classList.add("free");
-    else if (value === "Service") card.classList.add("service");
+    else if (value === "Unavailable") card.classList.add("unavailable");
     else card.classList.add("assigned");
 
     document.getElementById("bike" + i + "-time").innerText =
