@@ -135,7 +135,7 @@ select {
 function askName() {
   let name = localStorage.getItem("username");
   if (!name) {
-    name = prompt("Enter your name:");
+    name = prompt("Enter your name / กรุณาใส่ชื่อของคุณ");
     if (name) localStorage.setItem("username", name);
   }
   document.getElementById("username").innerText = name || "—";
