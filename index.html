@@ -42,9 +42,7 @@ select { width:100%; font-size:13px; padding:4px; }
 }
 .edit-on { background:#ffecb3; border-color:#ff9800; }
 
-input.date {
-  width:100%; font-size:11px; padding:2px;
-}
+input.date { width:100%; font-size:11px; padding:2px; }
 </style>
 </head>
 
@@ -86,6 +84,9 @@ const db = firebase.firestore();
 const ADMIN_UID = "pK46rxDcvEVZEyktMvc8g2FaCoH2";
 let editMode = false;
 
+/* 🔁 pending change memory */
+let pendingStatusChange = null;
+
 const bikes = [
   { id:1, name:"Honda Click", img:"click_redblack.png", plate:"1กต 8316" },
   { id:2, name:"Yamaha Fazzio grey", img:"fazzio_darkgrey.png", plate:"1กร 5287" },
@@ -96,6 +97,15 @@ auth.onAuthStateChanged(u=>{
   document.getElementById("username").innerText = u ? u.displayName : "—";
   document.getElementById("editToggle").style.display =
     (u && u.uid===ADMIN_UID) ? "inline" : "none";
+
+  /* ✅ apply pending change after login */
+  if(u && pendingStatusChange){
+    applyStatusChange(
+      pendingStatusChange.id,
+      pendingStatusChange.value
+    );
+    pendingStatusChange = null;
+  }
 });
 
 function signIn(){
@@ -136,24 +146,6 @@ function remainingText(days){
   if(days<=14) return days+" days / วัน";
   if(days<60) return days+" days / วัน";
   return Math.round(days/30)+" months / เดือน";
-}
-
-/* ---------- EXPIRY UI ---------- */
-function expiryLine(label,field,val,bikeId){
-  const days = daysLeftFlexible(val);
-  let cls="";
-  if(days<0) cls="expired";
-  else if(days<=14) cls="warn";
-
-  if(editMode){
-    const d = parseDateFlexible(val);
-    return `<div class="${cls}">
-      ${label}:
-      <input class="date" value="${d?formatDMY(d):""}"
-        onchange="updateExpiry('${bikeId}','${field}',this.value)">
-    </div>`;
-  }
-  return `<div class="${cls}">${label}: ${remainingText(days)}</div>`;
 }
 
 /* ---------- TIME AGO ---------- */
@@ -210,32 +202,21 @@ bikes.forEach(b=>{
     }
 
     document.getElementById("bike"+b.id+"-expiry").innerHTML =
-      expiryLine("Tax / ภาษี","taxExpiry",d.taxExpiry,"bike"+b.id) +
-      expiryLine("Insurance / ประกัน","insuranceExpiry",d.insuranceExpiry,"bike"+b.id) +
-      `<div>Plate / ทะเบียน: ${b.plate}</div>`;
+      `<div>${b.plate}</div>`;
   });
 });
 
-function rerenderAll(){
-  bikes.forEach(b=>{
-    db.collection("bikes").doc("bike"+b.id).get().then(doc=>{
-      if(doc.exists){
-        const d = doc.data();
-        document.getElementById("bike"+b.id+"-expiry").innerHTML =
-          expiryLine("Tax / ภาษี","taxExpiry",d.taxExpiry,"bike"+b.id) +
-          expiryLine("Insurance / ประกัน","insuranceExpiry",d.insuranceExpiry,"bike"+b.id) +
-          `<div>Plate / ทะเบียน: ${b.plate}</div>`;
-      }
-    });
-  });
-}
-
-/* ---------- SAVE ---------- */
+/* ---------- STATUS SAVE (FIXED) ---------- */
 function saveStatus(id,val){
   if(!auth.currentUser){
+    pendingStatusChange = { id:id, value:val };
     signIn();
     return;
   }
+  applyStatusChange(id,val);
+}
+
+function applyStatusChange(id,val){
   db.collection("bikes").doc("bike"+id).update({
     status: val,
     updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
@@ -243,9 +224,16 @@ function saveStatus(id,val){
   });
 }
 
-function updateExpiry(bikeId,field,val){
-  if(!editMode) return;
-  db.collection("bikes").doc(bikeId).update({ [field]: val });
+/* ---------- RERENDER ---------- */
+function rerenderAll(){
+  bikes.forEach(b=>{
+    db.collection("bikes").doc("bike"+b.id).get().then(doc=>{
+      if(doc.exists){
+        document.getElementById("bike"+b.id+"-expiry").innerHTML =
+          `<div>${b.plate}</div>`;
+      }
+    });
+  });
 }
 </script>
 
