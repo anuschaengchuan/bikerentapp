@@ -5,17 +5,60 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 
 <style>
-body { font-family:sans-serif; background:#f2f2f2; margin:0; padding:8px; }
-.app { max-width:360px; margin:0 auto; }
-
-.top {
-  text-align:right;
-  font-size:11px;
-  color:#555;
-  margin-bottom:6px;
+body {
+  font-family:sans-serif;
+  background:#f2f2f2;
+  margin:0;
+  padding:8px;
 }
-.top span { cursor:pointer; text-decoration:underline; margin-left:6px; }
+.app {
+  max-width:360px;
+  margin:0 auto;
+}
 
+/* ---------- TOP BAR ---------- */
+.header {
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  background:#fff;
+  padding:6px 10px;
+  border-radius:8px;
+  margin-bottom:8px;
+  box-shadow:0 1px 3px rgba(0,0,0,.08);
+}
+
+.logo {
+  height:26px;
+}
+
+.userbar {
+  font-size:11px;
+  color:#444;
+  display:flex;
+  align-items:center;
+  gap:6px;
+}
+
+.userbar span.action {
+  text-decoration:underline;
+  cursor:pointer;
+}
+
+.edit-btn {
+  font-size:11px;
+  padding:2px 6px;
+  border:1px solid #999;
+  border-radius:4px;
+  background:#fff;
+  cursor:pointer;
+}
+.edit-on {
+  background:#ffecb3;
+  border-color:#ff9800;
+}
+
+/* ---------- CARDS ---------- */
 .card {
   background:#fff;
   border-radius:8px;
@@ -28,14 +71,40 @@ body { font-family:sans-serif; background:#f2f2f2; margin:0; padding:8px; }
 .card.assigned { border-color:#e53935; }
 .card.unavailable { background:#eee; border-color:#9e9e9e; }
 
-.row { display:flex; gap:10px; align-items:flex-start; }
-img { width:130px; }
+.row {
+  display:flex;
+  gap:10px;
+  align-items:flex-start;
+}
 
-.name { font-size:13px; font-weight:600; margin-top:4px; }
-.updated { font-size:11px; color:#777; margin-top:2px; }
-select { width:100%; font-size:13px; padding:4px; }
+img.bike {
+  width:130px;
+}
 
-.info { font-size:11px; color:#555; line-height:1.6; }
+.name {
+  font-size:13px;
+  font-weight:600;
+  margin-top:4px;
+}
+
+.updated {
+  font-size:11px;
+  color:#777;
+  margin-top:2px;
+}
+
+select {
+  width:100%;
+  font-size:13px;
+  padding:4px;
+}
+
+/* ---------- INFO ---------- */
+.info {
+  font-size:11px;
+  color:#555;
+  line-height:1.6;
+}
 .info div { margin-bottom:6px; }
 
 .warn { color:#ff9800; animation:flash 1.2s infinite; }
@@ -44,16 +113,6 @@ select { width:100%; font-size:13px; padding:4px; }
 @keyframes flash {
   0%{opacity:1} 50%{opacity:.3} 100%{opacity:1}
 }
-
-.edit-btn {
-  font-size:11px;
-  padding:2px 6px;
-  border:1px solid #999;
-  border-radius:4px;
-  background:#fff;
-  cursor:pointer;
-}
-.edit-on { background:#ffecb3; border-color:#ff9800; }
 
 input.date {
   width:100%;
@@ -67,13 +126,15 @@ input.date {
 
 <div class="app">
 
-<div class="top">
-  User: <strong id="username">—</strong>
-  <span onclick="signIn()">Sign in</span>
-  <span onclick="signOut()">Sign out</span>
-  <span id="editToggle" style="display:none">
-   <button id="editBtn" class="edit-btn" onclick="toggleEdit()">Edit</button>
-  </span>
+<!-- HEADER -->
+<div class="header">
+  <img src="01 Logo_color.png" class="logo">
+  <div class="userbar">
+    <span id="username">—</span>
+    <span class="action" onclick="signIn()">Login</span>
+    <span class="action" onclick="signOut()">Logout</span>
+    <button id="editBtn" class="edit-btn" onclick="toggleEdit()" style="display:none">Edit</button>
+  </div>
 </div>
 
 <div id="bikes"></div>
@@ -85,7 +146,7 @@ input.date {
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
 
 <script>
-/* ---------------- FIREBASE ---------------- */
+/* ---------- FIREBASE ---------- */
 firebase.initializeApp({
   apiKey: "AIzaSyCqJ-LqV_hn06MhfweOTJGIDmIt5bIq2JI",
   authDomain: "baan-namsai-bikes.firebaseapp.com",
@@ -95,7 +156,7 @@ firebase.initializeApp({
 const auth = firebase.auth();
 const db = firebase.firestore();
 
-/* ---------------- CONFIG ---------------- */
+/* ---------- CONFIG ---------- */
 const ADMIN_UID = "pK46rxDcvEVZEyktMvc8g2FaCoH2";
 
 const bikes = [
@@ -107,13 +168,13 @@ const bikes = [
 let editMode = false;
 let pendingStatus = null;
 
-/* ---------------- AUTH ---------------- */
+/* ---------- AUTH ---------- */
 auth.onAuthStateChanged(user=>{
   document.getElementById("username").innerText =
     user ? user.displayName : "—";
 
-  document.getElementById("editToggle").style.display =
-    (user && user.uid === ADMIN_UID) ? "inline" : "none";
+  document.getElementById("editBtn").style.display =
+    (user && user.uid === ADMIN_UID) ? "inline-block" : "none";
 
   if(user && pendingStatus){
     applyStatus(pendingStatus.id, pendingStatus.value);
@@ -127,9 +188,10 @@ function signIn(){
 function signOut(){
   editMode = false;
   auth.signOut();
+  document.getElementById("editBtn").classList.remove("edit-on");
 }
 
-/* ---------------- DATE HELPERS ---------------- */
+/* ---------- DATE HELPERS ---------- */
 function parseDate(str){
   if(!str) return null;
   if(str.includes("-")) return new Date(str+"T00:00:00");
@@ -156,7 +218,7 @@ function timeAgo(ts){
   return `${Math.floor(s/86400)} d ago · ${String(d.getDate()).padStart(2,"0")}/${String(d.getMonth()+1).padStart(2,"0")}/${String(d.getFullYear()).slice(-2)} ${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}`;
 }
 
-/* ---------------- UI ---------------- */
+/* ---------- UI ---------- */
 function toggleEdit(){
   editMode = !editMode;
   document.getElementById("editBtn").classList.toggle("edit-on", editMode);
@@ -167,7 +229,7 @@ function renderBike(b){
   return `
   <div class="card" id="bike${b.id}-card">
     <div class="row">
-      <img src="${b.img}">
+      <img src="${b.img}" class="bike">
       <div class="info" id="bike${b.id}-expiry"></div>
     </div>
     <div class="name">${b.name}</div>
@@ -186,7 +248,6 @@ function renderBike(b){
 document.getElementById("bikes").innerHTML =
   bikes.map(renderBike).join("");
 
-/* ---------------- RENDER LOGIC ---------------- */
 function expiryBlock(bikeId, d, plate){
   const taxDays = daysLeft(d.taxExpiry);
   const insDays = daysLeft(d.insuranceExpiry);
@@ -252,7 +313,7 @@ function rerenderAll(){
   });
 }
 
-/* ---------------- SAVE ---------------- */
+/* ---------- SAVE ---------- */
 function saveStatus(id,val){
   if(!auth.currentUser){
     pendingStatus = { id, value: val };
@@ -276,4 +337,3 @@ function updateExpiry(bikeId,field,val){
 
 </body>
 </html>
-
