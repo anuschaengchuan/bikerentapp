@@ -8,34 +8,56 @@
 body { font-family:sans-serif; background:#f2f2f2; margin:0; padding:8px; }
 .app { max-width:360px; margin:0 auto; }
 
+/* HEADER */
 .header {
-  display:flex; justify-content:space-between; align-items:center;
-  background:#fff; padding:12px; border-radius:10px;
-  box-shadow:0 1px 3px rgba(0,0,0,.08); margin-bottom:12px;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  background:#fff;
+  padding:12px;
+  border-radius:10px;
+  margin-bottom:12px;
+  box-shadow:0 1px 3px rgba(0,0,0,.08);
 }
 .logo { height:80px; }
 
 .right { display:flex; flex-direction:column; align-items:flex-end; gap:6px; }
 
-.lang-switch { cursor:pointer; font-size:13px; }
+.lang-switch {
+  display:flex;
+  align-items:center;
+  gap:6px;
+  cursor:pointer;
+  font-size:13px;
+}
+.flag { font-size:20px; }
 
 .actions { display:flex; align-items:center; gap:8px; }
 
 .avatar {
-  width:32px; height:32px; border-radius:50%;
+  width:32px;
+  height:32px;
+  border-radius:50%;
   display:none;
 }
 
 .btn {
-  padding:7px 16px; font-size:13px;
-  border-radius:6px; border:1px solid #bbb;
-  background:#fff; cursor:pointer;
+  padding:7px 16px;
+  font-size:13px;
+  border-radius:6px;
+  border:1px solid #bbb;
+  background:#fff;
+  cursor:pointer;
 }
 .btn.edit-on { background:#ffecb3; border-color:#ff9800; }
 
+/* CARDS */
 .card {
-  background:#fff; border-radius:8px; padding:8px;
-  margin-bottom:8px; border:2px solid transparent;
+  background:#fff;
+  border-radius:8px;
+  padding:8px;
+  margin-bottom:8px;
+  border:2px solid transparent;
   box-shadow:0 1px 3px rgba(0,0,0,.08);
 }
 .card.free { background:#e8f5e9; border-color:#4caf50; }
@@ -76,7 +98,9 @@ img.bike { width:130px; }
 .updated { font-size:11px; color:#777; margin-top:4px; }
 
 input.date {
-  width:100%; font-size:11px; padding:2px;
+  width:100%;
+  font-size:11px;
+  padding:2px;
 }
 
 .warn { color:#ff9800; animation:flash 1.2s infinite; }
@@ -97,7 +121,8 @@ input.date {
 
   <div class="right">
     <div class="lang-switch" onclick="toggleLang()">
-      <span id="langText"></span>
+      <span id="langLabel"></span>
+      <span id="langFlag" class="flag"></span>
     </div>
 
     <div class="actions">
@@ -118,7 +143,7 @@ input.date {
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
 
 <script>
-/* ---------- CONFIG ---------- */
+/* ================= CONFIG ================= */
 firebase.initializeApp({
   apiKey:"AIzaSyCqJ-LqV_hn06MhfweOTJGIDmIt5bIq2JI",
   authDomain:"baan-namsai-bikes.firebaseapp.com",
@@ -126,7 +151,6 @@ firebase.initializeApp({
 });
 const auth = firebase.auth();
 const db = firebase.firestore();
-
 const ADMIN_UID = "pK46rxDcvEVZEyktMvc8g2FaCoH2";
 
 const bikes = [
@@ -135,12 +159,13 @@ const bikes = [
   {id:3,name:"Yamaha Fazzio",img:"fazzio_lightblue.png",plate:"1กพ 2670"}
 ];
 
-let lang = localStorage.getItem("lang") || (navigator.language.startsWith("th")?"th":"en");
-let editMode = false;
 let bikeData = {};
+let editMode = false;
 let openStatusMenu = null;
 
-/* ---------- TEXT ---------- */
+/* ================= LANGUAGE ================= */
+let lang = localStorage.getItem("lang") || (navigator.language.startsWith("th")?"th":"en");
+
 const T = {
   en:{
     available:"Available",
@@ -188,10 +213,51 @@ const T = {
   }
 };
 
-/* ---------- HELPERS ---------- */
+function toggleLang(){
+  lang = lang==="en" ? "th" : "en";
+  localStorage.setItem("lang",lang);
+  updateHeader();
+  renderAll();
+}
+
+function updateHeader(){
+  langLabel.innerText = lang==="en" ? "ไทย" : "English";
+  langFlag.innerText  = lang==="en" ? "🇹🇭" : "🇬🇧";
+  loginBtn.innerText  = T[lang].login;
+  logoutBtn.innerText = T[lang].logout;
+}
+
+/* ================= AUTH ================= */
+auth.onAuthStateChanged(user=>{
+  if(user){
+    avatar.src = user.photoURL || "";
+    avatar.style.display = user.photoURL ? "block" : "none";
+    loginBtn.style.display="none";
+    logoutBtn.style.display="inline-block";
+    editBtn.style.display = user.uid===ADMIN_UID ? "inline-block" : "none";
+  } else {
+    avatar.style.display="none";
+    loginBtn.style.display="inline-block";
+    logoutBtn.style.display="none";
+    editBtn.style.display="none";
+    editMode=false;
+  }
+  updateHeader();
+});
+
+function signIn(){ auth.signInWithPopup(new firebase.auth.GoogleAuthProvider()); }
+function signOut(){ auth.signOut(); }
+
+function toggleEdit(){
+  editMode=!editMode;
+  editBtn.classList.toggle("edit-on",editMode);
+  renderAll();
+}
+
+/* ================= HELPERS ================= */
 function parseDate(str){
   if(!str) return null;
-  const [d,m,y] = str.split("/").map(Number);
+  const [d,m,y]=str.split("/").map(Number);
   return new Date(2000+y,m-1,d);
 }
 function daysLeft(str){
@@ -212,120 +278,32 @@ function timeAgo(ts){
   return Math.floor(s/86400)+" "+T[lang].day;
 }
 
-/* ---------- LANGUAGE ---------- */
-function toggleLang(){
-  lang = lang==="en"?"th":"en";
-  localStorage.setItem("lang",lang);
-  renderAllBikes();
-  updateHeader();
-}
-
-/* ---------- AUTH ---------- */
-auth.onAuthStateChanged(user=>{
-  if(user){
-    avatar.src=user.photoURL||"";
-    avatar.style.display=user.photoURL?"block":"none";
-    loginBtn.style.display="none";
-    logoutBtn.style.display="inline-block";
-    editBtn.style.display=user.uid===ADMIN_UID?"inline-block":"none";
-  } else {
-    avatar.style.display="none";
-    loginBtn.style.display="inline-block";
-    logoutBtn.style.display="none";
-    editBtn.style.display="none";
-    editMode=false;
-  }
-  updateHeader();
-});
-
-function signIn(){ auth.signInWithPopup(new firebase.auth.GoogleAuthProvider()); }
-function signOut(){ auth.signOut(); }
-
-function toggleEdit(){
-  editMode=!editMode;
-  editBtn.classList.toggle("edit-on",editMode);
-  renderAllBikes();
-}
-
-/* ---------- RENDER ---------- */
-function updateHeader(){
-  langText.innerText = lang==="en"?"ไทย":"English";
-  loginBtn.innerText = T[lang].login;
-  logoutBtn.innerText = T[lang].logout;
-}
-
-function renderAllBikes(){
-  const wrap=document.getElementById("bikes");
-  wrap.innerHTML=bikes.map(b=>renderBike(b)).join("");
+/* ================= RENDER ================= */
+function renderAll(){
+  bikesEl.innerHTML = bikes.map(b=>renderBike(b)).join("");
 }
 
 function renderBike(b){
- function renderBike(b){
-  const d = bikeData[b.id] || {};
-  const taxDays = daysLeft(d.taxExpiry);
-  const insDays = daysLeft(d.insuranceExpiry);
+  const d=bikeData[b.id]||{};
+  const taxDays=daysLeft(d.taxExpiry);
+  const insDays=daysLeft(d.insuranceExpiry);
+
+  function line(label,days){
+    let cls="";
+    if(days<0) cls="expired";
+    else if(days<=14) cls="warn";
+    return `<div class="${cls}">${label}: ${remaining(days)}</div>`;
+  }
 
   const statusLabel =
     d.status==="Free" ? T[lang].available :
     d.status==="Unavailable" ? T[lang].unavailable :
     T[lang].houses[d.status] || d.status;
 
-  function expiryLine(label, days){
-    let cls = "";
-    if(days < 0) cls = "expired";
-    else if(days <= 14) cls = "warn";
-
-    return `<div class="${cls}">${label}: ${remaining(days)}</div>`;
-  }
-
   return `
   <div class="card ${d.status==='Free'?'free':d.status==='Unavailable'?'unavailable':'assigned'}">
     <div class="name">${b.name}</div>
 
-    <div class="row">
-      <img src="${b.img}" class="bike">
-      <div class="info">
-        ${editMode ? `
-          <div>${T[lang].tax}:
-            <input class="date" value="${d.taxExpiry||""}"
-              onchange="saveExpiry(${b.id},'taxExpiry',this.value)">
-          </div>
-          <div>${T[lang].insurance}:
-            <input class="date" value="${d.insuranceExpiry||""}"
-              onchange="saveExpiry(${b.id},'insuranceExpiry',this.value)">
-          </div>
-        ` : `
-          ${expiryLine(T[lang].tax, taxDays)}
-          ${expiryLine(T[lang].insurance, insDays)}
-        `}
-        <div>${T[lang].plate}: ${b.plate}</div>
-      </div>
-    </div>
-
-    <div class="status-btn" onclick="toggleStatusMenu(${b.id})">
-      ${statusLabel}
-    </div>
-
-    ${openStatusMenu===b.id ? `
-      <div class="status-menu">
-        <div onclick="setStatus(${b.id},'Free')">${T[lang].available}</div>
-        ${Object.keys(T[lang].houses).map(h=>`
-          <div onclick="setStatus(${b.id},'${h}')">${T[lang].houses[h]}</div>
-        `).join("")}
-        <div onclick="setStatus(${b.id},'Unavailable')">${T[lang].unavailable}</div>
-      </div>
-    ` : ``}
-
-    <div class="updated">
-      ${d.updatedAt ? `${timeAgo(d.updatedAt)} ${T[lang].by} ${d.updatedBy||""}` : ""}
-    </div>
-  </div>`;
-}
-
-
-  return `
-  <div class="card ${d.status==='Free'?'free':d.status==='Unavailable'?'unavailable':'assigned'}">
-    <div class="name">${b.name}</div>
     <div class="row">
       <img src="${b.img}" class="bike">
       <div class="info">
@@ -335,14 +313,14 @@ function renderBike(b){
           <div>${T[lang].insurance}: <input class="date" value="${d.insuranceExpiry||""}"
             onchange="saveExpiry(${b.id},'insuranceExpiry',this.value)"></div>
         ` : `
-          <div>${T[lang].tax}: ${remaining(daysLeft(d.taxExpiry))}</div>
-          <div>${T[lang].insurance}: ${remaining(daysLeft(d.insuranceExpiry))}</div>
+          ${line(T[lang].tax,taxDays)}
+          ${line(T[lang].insurance,insDays)}
         `}
         <div>${T[lang].plate}: ${b.plate}</div>
       </div>
     </div>
 
-    <div class="status-btn" onclick="toggleStatusMenu(${b.id})">${statusLabel}</div>
+    <div class="status-btn" onclick="toggleStatus(${b.id})">${statusLabel}</div>
 
     ${openStatusMenu===b.id ? `
       <div class="status-menu">
@@ -352,7 +330,7 @@ function renderBike(b){
         `).join("")}
         <div onclick="setStatus(${b.id},'Unavailable')">${T[lang].unavailable}</div>
       </div>
-    ` : ``}
+    ` : ""}
 
     <div class="updated">
       ${d.updatedAt ? `${timeAgo(d.updatedAt)} ${T[lang].by} ${d.updatedBy||""}` : ""}
@@ -360,24 +338,23 @@ function renderBike(b){
   </div>`;
 }
 
-/* ---------- FIRESTORE ---------- */
+/* ================= FIRESTORE ================= */
+const bikesEl=document.getElementById("bikes");
+
 bikes.forEach(b=>{
   db.collection("bikes").doc("bike"+b.id).onSnapshot(doc=>{
     if(doc.exists){
       const data=doc.data();
-      bikeData[b.id]={
-        ...data,
-        updatedAt:data.updatedAt?.toMillis?.()
-      };
-      renderAllBikes();
+      bikeData[b.id]={...data,updatedAt:data.updatedAt?.toMillis?.()};
+      renderAll();
     }
   });
 });
 
-/* ---------- ACTIONS ---------- */
-function toggleStatusMenu(id){
-  openStatusMenu = openStatusMenu===id?null:id;
-  renderAllBikes();
+/* ================= ACTIONS ================= */
+function toggleStatus(id){
+  openStatusMenu = openStatusMenu===id ? null : id;
+  renderAll();
 }
 function setStatus(id,val){
   if(!auth.currentUser){ signIn(); return; }
@@ -395,9 +372,8 @@ function saveExpiry(id,field,val){
 
 /* INIT */
 updateHeader();
-renderAllBikes();
+renderAll();
 </script>
 
 </body>
 </html>
-
