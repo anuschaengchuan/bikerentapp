@@ -39,30 +39,42 @@ body {
   border: 2px solid transparent;
 }
 
-.card.free {
-  background: #e8f5e9;
-  border-color: #4caf50;
-}
+.card.free { background:#e8f5e9; border-color:#4caf50; }
+.card.assigned { border-color:#e53935; }
+.card.unavailable { background:#eee; border-color:#9e9e9e; }
 
-.card.assigned {
-  border-color: #e53935;
-}
-
-.card.unavailable {
-  background: #eeeeee;
-  border-color: #9e9e9e;
+.row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 img {
   width: 100%;
-  max-width: 160px;
-  display: block;
-  margin: 0 auto 4px;
+  max-width: 130px;
 }
+
+.name {
+  font-size: 13px;
+  font-weight: 600;
+  margin-top: 4px;
+}
+
+.updated {
+  font-size: 11px;
+  color: #777;
+  margin-top: 2px;
+}
+
+select {
+  width: 100%;
+  font-size: 13px;
+  padding: 4px;
+}
+
 .info {
   font-size: 11px;
   color: #555;
-  margin-left: 8px;
 }
 
 .warn {
@@ -76,32 +88,9 @@ img {
 }
 
 @keyframes flash {
-  0% { opacity: 1; }
-  50% { opacity: 0.3; }
-  100% { opacity: 1; }
-}
-
-.row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.name {
-  font-size: 13px;
-  font-weight: 600;
-}
-
-.updated {
-  font-size: 11px;
-  color: #777;
-  margin-top: 2px;
-}
-
-select {
-  width: 100%;
-  font-size: 13px;
-  padding: 4px;
+  0% { opacity:1; }
+  50% { opacity:.3; }
+  100% { opacity:1; }
 }
 </style>
 </head>
@@ -116,9 +105,13 @@ select {
   <span onclick="signOut()">Sign out</span>
 </div>
 
+<!-- BIKE TEMPLATE -->
 <div class="card" id="bike1-card">
-  <img src="click_redblack.png">
-  <div class="name">Honda Click 125</div>
+  <div class="row">
+    <img src="click_redblack.png">
+    <div class="info" id="bike1-expiry"></div>
+  </div>
+  <div class="name">Honda Click</div>
   <select onchange="attemptSave(1,this)">
     <option value="Free">Free / ว่าง</option>
     <option>Baan Mai / บ้านไม้</option>
@@ -131,7 +124,10 @@ select {
 </div>
 
 <div class="card" id="bike2-card">
-  <img src="fazzio_darkgrey.png">
+  <div class="row">
+    <img src="fazzio_darkgrey.png">
+    <div class="info" id="bike2-expiry"></div>
+  </div>
   <div class="name">Yamaha Fazzio</div>
   <select onchange="attemptSave(2,this)">
     <option value="Free">Free / ว่าง</option>
@@ -145,7 +141,10 @@ select {
 </div>
 
 <div class="card" id="bike3-card">
-  <img src="fazzio_lightblue.png">
+  <div class="row">
+    <img src="fazzio_lightblue.png">
+    <div class="info" id="bike3-expiry"></div>
+  </div>
   <div class="name">Yamaha Fazzio</div>
   <select onchange="attemptSave(3,this)">
     <option value="Free">Free / ว่าง</option>
@@ -160,7 +159,6 @@ select {
 
 </div>
 
-<!-- Firebase -->
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
@@ -179,83 +177,89 @@ firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.firestore();
 
-auth.onAuthStateChanged(user => {
-  document.getElementById("username").innerText =
-    user ? user.displayName : "—";
-});
+const ADMIN_UID = "pK46rxDcvEVZEyktMvc8g2FaCoH2";
 
-/* 🔄 LIVE SYNC */
-[1,2,3].forEach(id => {
-  db.collection("bikes").doc("bike" + id).onSnapshot(doc => {
-    if (!doc.exists) return;
-    const d = doc.data();
-    localStorage.setItem("bike" + id, d.status);
-    if (d.updatedAt?.toMillis) {
-      localStorage.setItem("bike" + id + "_time", d.updatedAt.toMillis());
-    }
-    localStorage.setItem("bike" + id + "_by", d.updatedBy || "");
-    updateUI();
-  });
+function isAdmin() {
+  return auth.currentUser && auth.currentUser.uid === ADMIN_UID;
+}
+
+auth.onAuthStateChanged(u=>{
+  document.getElementById("username").innerText = u ? u.displayName : "—";
 });
 
 function signIn() {
-  const provider = new firebase.auth.GoogleAuthProvider();
-  auth.signInWithPopup(provider).catch(err => {
-    alert("Google login failed");
-    console.error(err);
+  auth.signInWithPopup(new firebase.auth.GoogleAuthProvider());
+}
+function signOut() { auth.signOut(); }
+
+[1,2,3].forEach(i=>{
+  db.collection("bikes").doc("bike"+i).onSnapshot(doc=>{
+    if(!doc.exists) return;
+    const d = doc.data();
+    localStorage.setItem("bike"+i,d.status);
+    if(d.updatedAt?.toMillis)
+      localStorage.setItem("bike"+i+"_time",d.updatedAt.toMillis());
+    localStorage.setItem("bike"+i+"_by",d.updatedBy||"");
+    renderExpiry("bike"+i,d);
+    updateUI(i);
   });
-}
+});
 
-function signOut() {
-  auth.signOut();
-}
-
-function attemptSave(id, selectEl) {
-  const user = auth.currentUser;
-  if (!user) {
-    alert("Please sign in with Google / กรุณาเข้าสู่ระบบด้วย Google");
-    updateUI();
-    return;
-  }
-
-  db.collection("bikes").doc("bike" + id).set({
-    status: selectEl.value,
+function attemptSave(id,el){
+  if(!auth.currentUser){ alert("Please sign in"); updateUI(id); return; }
+  db.collection("bikes").doc("bike"+id).update({
+    status: el.value,
     updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
-    updatedBy: user.displayName
+    updatedBy: auth.currentUser.displayName
   });
 }
 
-function timeAgo(ts) {
-  const mins = Math.floor((Date.now() - ts) / 60000);
-  if (mins < 60) return mins + " min ago";
-  if (mins < 1440) return Math.floor(mins / 60) + " h ago";
+function daysLeft(d){ return Math.ceil((new Date(d)-new Date())/86400000); }
+
+function expiryLine(label,field,val,bike){
+  const days=daysLeft(val);
+  let cls="",txt=val;
+  if(days<0){cls="expired";txt="Expired";}
+  else if(days<=14){cls="warn";txt=days+" days";}
+  if(isAdmin())
+    return `<div class="${cls}">${label}: <input type="date" value="${val}"
+      onchange="updateExpiry('${bike}','${field}',this.value)"></div>`;
+  return `<div class="${cls}">${label}: ${txt}</div>`;
+}
+
+function renderExpiry(bike,d){
+  document.getElementById(bike+"-expiry").innerHTML =
+    expiryLine("Tax","taxExpiry",d.taxExpiry,bike) +
+    expiryLine("Ins","insuranceExpiry",d.insuranceExpiry,bike);
+}
+
+function updateExpiry(bike,field,val){
+  if(!isAdmin()) return;
+  db.collection("bikes").doc(bike).update({[field]:val});
+}
+
+function timeAgo(ts){
+  const m=Math.floor((Date.now()-ts)/60000);
+  if(m<60) return m+" min ago";
+  if(m<1440) return Math.floor(m/60)+" h ago";
   return new Date(ts).toLocaleDateString();
 }
 
-function updateUI() {
-  for (let i = 1; i <= 3; i++) {
-    const card = document.getElementById("bike" + i + "-card");
-    const select = card.querySelector("select");
-    const value = localStorage.getItem("bike" + i) || "Free";
-    const ts = localStorage.getItem("bike" + i + "_time");
-    const by = localStorage.getItem("bike" + i + "_by");
-
-    select.value = value;
-    card.classList.remove("free","assigned","unavailable");
-
-    if (value === "Free") card.classList.add("free");
-    else if (value === "Unavailable") card.classList.add("unavailable");
-    else card.classList.add("assigned");
-
-    document.getElementById("bike" + i + "-time").innerText =
-      ts ? `Updated ${timeAgo(Number(ts))} by ${by}` : "";
-  }
+function updateUI(i){
+  const card=document.getElementById("bike"+i+"-card");
+  const sel=card.querySelector("select");
+  const v=localStorage.getItem("bike"+i)||"Free";
+  const ts=localStorage.getItem("bike"+i+"_time");
+  const by=localStorage.getItem("bike"+i+"_by");
+  sel.value=v;
+  card.classList.remove("free","assigned","unavailable");
+  if(v==="Free") card.classList.add("free");
+  else if(v==="Unavailable") card.classList.add("unavailable");
+  else card.classList.add("assigned");
+  card.querySelector(".updated").innerText =
+    ts ? `Updated ${timeAgo(Number(ts))} by ${by}` : "";
 }
-
-updateUI();
-setInterval(updateUI, 60000);
 </script>
 
 </body>
 </html>
-
