@@ -260,11 +260,68 @@ function renderAllBikes(){
 }
 
 function renderBike(b){
+ function renderBike(b){
   const d = bikeData[b.id] || {};
+  const taxDays = daysLeft(d.taxExpiry);
+  const insDays = daysLeft(d.insuranceExpiry);
+
   const statusLabel =
     d.status==="Free" ? T[lang].available :
     d.status==="Unavailable" ? T[lang].unavailable :
     T[lang].houses[d.status] || d.status;
+
+  function expiryLine(label, days){
+    let cls = "";
+    if(days < 0) cls = "expired";
+    else if(days <= 14) cls = "warn";
+
+    return `<div class="${cls}">${label}: ${remaining(days)}</div>`;
+  }
+
+  return `
+  <div class="card ${d.status==='Free'?'free':d.status==='Unavailable'?'unavailable':'assigned'}">
+    <div class="name">${b.name}</div>
+
+    <div class="row">
+      <img src="${b.img}" class="bike">
+      <div class="info">
+        ${editMode ? `
+          <div>${T[lang].tax}:
+            <input class="date" value="${d.taxExpiry||""}"
+              onchange="saveExpiry(${b.id},'taxExpiry',this.value)">
+          </div>
+          <div>${T[lang].insurance}:
+            <input class="date" value="${d.insuranceExpiry||""}"
+              onchange="saveExpiry(${b.id},'insuranceExpiry',this.value)">
+          </div>
+        ` : `
+          ${expiryLine(T[lang].tax, taxDays)}
+          ${expiryLine(T[lang].insurance, insDays)}
+        `}
+        <div>${T[lang].plate}: ${b.plate}</div>
+      </div>
+    </div>
+
+    <div class="status-btn" onclick="toggleStatusMenu(${b.id})">
+      ${statusLabel}
+    </div>
+
+    ${openStatusMenu===b.id ? `
+      <div class="status-menu">
+        <div onclick="setStatus(${b.id},'Free')">${T[lang].available}</div>
+        ${Object.keys(T[lang].houses).map(h=>`
+          <div onclick="setStatus(${b.id},'${h}')">${T[lang].houses[h]}</div>
+        `).join("")}
+        <div onclick="setStatus(${b.id},'Unavailable')">${T[lang].unavailable}</div>
+      </div>
+    ` : ``}
+
+    <div class="updated">
+      ${d.updatedAt ? `${timeAgo(d.updatedAt)} ${T[lang].by} ${d.updatedBy||""}` : ""}
+    </div>
+  </div>`;
+}
+
 
   return `
   <div class="card ${d.status==='Free'?'free':d.status==='Unavailable'?'unavailable':'assigned'}">
@@ -343,3 +400,4 @@ renderAllBikes();
 
 </body>
 </html>
+
