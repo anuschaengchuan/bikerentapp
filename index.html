@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Motorbike Assignments</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<style>
+body {
+  font-family: sans-serif;
+  background: #f2f2f2;
+  margin: 0;
+  padding: 20px;
+}
+
+.app {
+  max-width: 420px;
+  margin: 0 auto;
+}
+
+h2 {
+  margin-bottom: 20px;
+}
+
+.card {
+  background: #ffffff;
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 16px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+  border: 2px solid transparent;
+  transition: background 0.2s, border 0.2s;
+}
+
+/* FREE */
+.card.free {
+  background: #e8f5e9;
+  border-color: #4caf50;
+}
+
+/* ASSIGNED */
+.card.assigned {
+  border-color: #e53935;
+}
+
+img {
+  width: 100%;
+  max-width: 260px;
+  display: block;
+  margin: 0 auto 12px;
+}
+
+.small {
+  color: #666;
+  font-size: 14px;
+}
+
+select {
+  width: 100%;
+  font-size: 16px;
+  padding: 8px;
+  margin-top: 8px;
+}
+</style>
+</head>
+
+<body>
+
+<div class="app">
+
+<h2>Motorbike Assignments</h2>
+
+<div class="card" id="bike1-card">
+  <img src="click_redblack.png" alt="Honda Click 125 Red Black">
+  <strong>Honda Click 125</strong>
+  <div class="small">Red / Black</div>
+  <select onchange="save('bike1', this.value)">
+    <option value="Free">Free</option>
+    <option>Baan Mai</option>
+    <option>Baan Mai Pai</option>
+    <option>Baan Nam Lom</option>
+    <option>Baan Makham</option>
+  </select>
+</div>
+
+<div class="card" id="bike2-card">
+  <img src="fazzio_darkgrey.png" alt="Yamaha Fazzio Dark Grey">
+  <strong>Yamaha Fazzio</strong>
+  <div class="small">Dark Grey</div>
+  <select onchange="save('bike2', this.value)">
+    <option value="Free">Free</option>
+    <option>Baan Mai</option>
+    <option>Baan Mai Pai</option>
+    <option>Baan Nam Lom</option>
+    <option>Baan Makham</option>
+  </select>
+</div>
+
+<div class="card" id="bike3-card">
+  <img src="fazzio_lightblue.png" alt="Yamaha Fazzio Light Blue">
+  <strong>Yamaha Fazzio</strong>
+  <div class="small">Light Blue</div>
+  <select onchange="save('bike3', this.value)">
+    <option value="Free">Free</option>
+    <option>Baan Mai</option>
+    <option>Baan Mai Pai</option>
+    <option>Baan Nam Lom</option>
+    <option>Baan Makham</option>
+  </select>
+</div>
+
+</div>
+
+<script>
+function save(key, value) {
+  localStorage.setItem(key, value);
+  updateUI();
+}
+
+function updateUI() {
+  document.querySelectorAll(".card").forEach((card, index) => {
+    const key = "bike" + (index + 1);
+    const value = localStorage.getItem(key) || "Free";
+    const select = card.querySelector("select");
+
+    select.value = value;
+    card.classList.remove("free", "assigned");
+
+    if (value === "Free") {
+      card.classList.add("free");
+    } else {
+      card.classList.add("assigned");
+    }
+  });
+}
+
+updateUI();
+</script>
+
+</body>
+</html>
