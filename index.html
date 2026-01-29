@@ -83,18 +83,47 @@ body {
 .card.assigned { border-color:#e53935; }
 .card.unavailable { background:#eee; border-color:#9e9e9e; }
 
+.name {
+  font-size:14px;
+  font-weight:700;
+  margin-bottom:6px;
+}
+
 .row { display:flex; gap:10px; }
 img.bike { width:130px; }
 
-.name { font-size:13px; font-weight:600; margin-top:4px; }
-.updated { font-size:11px; color:#777; margin-top:2px; }
-
-select { width:100%; font-size:13px; padding:4px; }
+.updated {
+  font-size:11px;
+  color:#777;
+  margin-top:4px;
+}
 
 /* ---------- INFO ---------- */
-.info { font-size:11px; color:#555; line-height:1.6; }
+.info {
+  font-size:11px;
+  color:#555;
+  line-height:1.6;
+}
 .info div { margin-bottom:6px; }
 
+.status-btn {
+  font-size:14px;
+  font-weight:700;
+  padding:6px;
+  text-align:center;
+  border-radius:6px;
+  border:1px solid #aaa;
+  cursor:pointer;
+}
+
+select {
+  width:100%;
+  font-size:13px;
+  padding:4px;
+  margin-top:6px;
+}
+
+/* ---------- WARN ---------- */
 .warn { color:#ff9800; animation:flash 1.2s infinite; }
 .expired { color:#e53935; font-weight:600; }
 
@@ -196,7 +225,6 @@ function toggleLang(){
   lang = lang==="en"?"th":"en";
   localStorage.setItem("lang",lang);
   updateLangUI();
-  updateDropdowns();
   rerenderAll();
 }
 
@@ -248,7 +276,6 @@ auth.onAuthStateChanged(user=>{
 /* ---------- HELPERS ---------- */
 function parseDate(str){
   if(!str) return null;
-  if(str.includes("-")) return new Date(str+"T00:00:00");
   const [d,m,y]=str.split("/").map(Number);
   return new Date(2000+y,m-1,d);
 }
@@ -273,50 +300,51 @@ function timeAgo(ts){
 /* ---------- UI ---------- */
 document.getElementById("bikes").innerHTML=bikes.map(b=>`
   <div class="card" id="bike${b.id}-card">
+    <div class="name">${b.name}</div>
     <div class="row">
       <img src="${b.img}" class="bike">
       <div class="info" id="bike${b.id}-info"></div>
     </div>
-    <div class="name">${b.name}</div>
-    <select id="bike${b.id}-select"></select>
+    <div class="status-btn" id="bike${b.id}-status" onclick="toggleStatusSelect(${b.id})"></div>
+    <select id="bike${b.id}-select" style="display:none"></select>
     <div class="updated" id="bike${b.id}-time"></div>
   </div>
 `).join("");
 
-function updateDropdowns(){
-  bikes.forEach(b=>{
-    const s=document.getElementById(`bike${b.id}-select`);
-    s.innerHTML=`
-      <option value="Free">${TEXT[lang].available}</option>
-      ${Object.keys(TEXT[lang].houses).map(k=>`
-        <option value="${k}">${TEXT[lang].houses[k]}</option>
-      `).join("")}
-      <option value="Unavailable">${TEXT[lang].unavailable}</option>
-    `;
-    s.onchange=()=>saveStatus(b.id,s.value);
-  });
+function toggleStatusSelect(id){
+  document.getElementById(`bike${id}-select`).style.display="block";
 }
 
-updateDropdowns();
-
-function toggleEdit(){
-  editMode=!editMode;
-  editBtn.classList.toggle("edit-on",editMode);
-  rerenderAll();
+function renderDropdown(b){
+  const s=document.getElementById(`bike${b.id}-select`);
+  s.innerHTML=`
+    <option value="Free">${TEXT[lang].available}</option>
+    ${Object.keys(TEXT[lang].houses).map(k=>`
+      <option value="${k}">${TEXT[lang].houses[k]}</option>
+    `).join("")}
+    <option value="Unavailable">${TEXT[lang].unavailable}</option>
+  `;
+  s.onchange=()=>{
+    saveStatus(b.id,s.value);
+    s.style.display="none";
+  };
 }
+
+bikes.forEach(renderDropdown);
 
 bikes.forEach(b=>{
   db.collection("bikes").doc("bike"+b.id).onSnapshot(doc=>{
     if(!doc.exists) return;
     const d=doc.data();
     const card=document.getElementById(`bike${b.id}-card`);
-    const sel=document.getElementById(`bike${b.id}-select`);
 
-    sel.value=d.status;
     card.className="card";
     if(d.status==="Free") card.classList.add("free");
     else if(d.status==="Unavailable") card.classList.add("unavailable");
     else card.classList.add("assigned");
+
+    document.getElementById(`bike${b.id}-status`).innerText =
+      TEXT[lang].houses[d.status] || TEXT[lang][d.status.toLowerCase()] || d.status;
 
     document.getElementById(`bike${b.id}-time`).innerText =
       d.updatedAt?.toMillis ? `${timeAgo(d.updatedAt.toMillis())} ${TEXT[lang].by} ${d.updatedBy||""}` : "";
@@ -335,27 +363,6 @@ bikes.forEach(b=>{
   });
 });
 
-function rerenderAll(){
-  bikes.forEach(b=>{
-    db.collection("bikes").doc("bike"+b.id).get().then(doc=>{
-      if(doc.exists){
-        const d=doc.data();
-        document.getElementById(`bike${b.id}-info`).innerHTML = editMode ? `
-          <div>${TEXT[lang].tax}: <input class="date" value="${d.taxExpiry||""}"
-            onchange="updateExpiry('${b.id}','taxExpiry',this.value)"></div>
-          <div>${TEXT[lang].insurance}: <input class="date" value="${d.insuranceExpiry||""}"
-            onchange="updateExpiry('${b.id}','insuranceExpiry',this.value)"></div>
-          <div>${TEXT[lang].plate}: ${b.plate}</div>
-        ` : `
-          <div>${TEXT[lang].tax}: ${remaining(daysLeft(d.taxExpiry))}</div>
-          <div>${TEXT[lang].insurance}: ${remaining(daysLeft(d.insuranceExpiry))}</div>
-          <div>${TEXT[lang].plate}: ${b.plate}</div>
-        `;
-      }
-    });
-  });
-}
-
 /* ---------- SAVE ---------- */
 function saveStatus(id,val){
   if(!auth.currentUser){ pendingStatus={id,value:val}; signIn(); return; }
@@ -371,6 +378,13 @@ function applyStatus(id,val){
 function updateExpiry(id,field,val){
   if(!editMode) return;
   db.collection("bikes").doc("bike"+id).update({[field]:val});
+}
+function toggleEdit(){
+  editMode=!editMode;
+  editBtn.classList.toggle("edit-on",editMode);
+}
+function rerenderAll(){
+  bikes.forEach(renderDropdown);
 }
 </script>
 
