@@ -18,12 +18,15 @@ body { font-family:sans-serif; background:#f2f2f2; margin:0; padding:8px; }
 .card.assigned { border-color:#e53935; }
 .card.unavailable { background:#eee; border-color:#9e9e9e; }
 
-.row { display:flex; align-items:center; gap:8px; }
+.row { display:flex; align-items:flex-start; gap:10px; }
 img { width:100%; max-width:130px; }
+
 .name { font-size:13px; font-weight:600; margin-top:4px; }
 .updated { font-size:11px; color:#777; margin-top:2px; }
 select { width:100%; font-size:13px; padding:4px; }
-.info { font-size:11px; color:#555; }
+
+.info { font-size:11px; color:#555; line-height:1.6; }
+.info div { margin-bottom:6px; }
 
 .warn { color:#ff9800; animation:flash 1.2s infinite; }
 .expired { color:#e53935; font-weight:600; }
@@ -40,10 +43,7 @@ select { width:100%; font-size:13px; padding:4px; }
   cursor:pointer;
   background:#fff;
 }
-.edit-on {
-  background:#ffecb3;
-  border-color:#ff9800;
-}
+.edit-on { background:#ffecb3; border-color:#ff9800; }
 </style>
 </head>
 
@@ -103,27 +103,37 @@ function signOut(){ editMode=false; auth.signOut(); }
 function toggleEdit(){
   editMode = !editMode;
   document.getElementById("editBtn").classList.toggle("edit-on", editMode);
-  rerenderAllExpiry();
+  rerenderAll();
 }
 
 function daysLeft(d){
   return Math.ceil((new Date(d) - new Date()) / 86400000);
 }
 
+function remainingText(days){
+  if(days < 0) return "Expired / หมดอายุ";
+  if(days <= 14) return days + " days / วัน";
+  if(days < 60) return days + " days / วัน";
+  return Math.round(days / 30) + " months / เดือน";
+}
+
 function expiryLine(label, field, val, bikeId){
   const days = daysLeft(val);
-  let cls="", txt=val;
-
-  if(days < 0){ cls="expired"; txt="Expired"; }
-  else if(days <= 14){ cls="warn"; txt = days + " days"; }
+  let cls = "";
+  if(days < 0) cls = "expired";
+  else if(days <= 14) cls = "warn";
 
   if(editMode){
     return `<div class="${cls}">
-      ${label}: <input type="date" value="${val}"
-      onchange="updateExpiry('${bikeId}','${field}',this.value)">
+      ${label}:
+      <input type="date" value="${val}"
+        onchange="updateExpiry('${bikeId}','${field}',this.value)">
     </div>`;
   }
-  return `<div class="${cls}">${label}: ${txt}</div>`;
+
+  return `<div class="${cls}">
+    ${label}: ${remainingText(days)}
+  </div>`;
 }
 
 function renderBike(b){
@@ -168,20 +178,21 @@ bikes.forEach(b=>{
         `Updated ${new Date(d.updatedAt.toMillis()).toLocaleString()} by ${d.updatedBy}`;
     }
 
-    renderExpiryBlock(b.id, d);
+    document.getElementById("bike"+b.id+"-expiry").innerHTML =
+      expiryLine("Tax / ภาษี","taxExpiry",d.taxExpiry,"bike"+b.id) +
+      expiryLine("Insurance / ประกัน","insuranceExpiry",d.insuranceExpiry,"bike"+b.id);
   });
 });
 
-function renderExpiryBlock(id, d){
-  document.getElementById("bike"+id+"-expiry").innerHTML =
-    expiryLine("Tax","taxExpiry",d.taxExpiry,"bike"+id) +
-    expiryLine("Ins","insuranceExpiry",d.insuranceExpiry,"bike"+id);
-}
-
-function rerenderAllExpiry(){
+function rerenderAll(){
   bikes.forEach(b=>{
     db.collection("bikes").doc("bike"+b.id).get().then(doc=>{
-      if(doc.exists) renderExpiryBlock(b.id, doc.data());
+      if(doc.exists){
+        const d = doc.data();
+        document.getElementById("bike"+b.id+"-expiry").innerHTML =
+          expiryLine("Tax / ภาษี","taxExpiry",d.taxExpiry,"bike"+b.id) +
+          expiryLine("Insurance / ประกัน","insuranceExpiry",d.insuranceExpiry,"bike"+b.id);
+      }
     });
   });
 }
@@ -195,7 +206,7 @@ function saveStatus(id,val){
   });
 }
 
-function updateExpiry(bikeId, field, val){
+function updateExpiry(bikeId,field,val){
   if(!editMode) return;
   db.collection("bikes").doc(bikeId).update({ [field]: val });
 }
@@ -203,4 +214,3 @@ function updateExpiry(bikeId, field, val){
 
 </body>
 </html>
-
