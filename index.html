@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!DOCTYPE html><!DOCTYPE html>
 <html>
 <head>
 <meta charset="UTF-8">
@@ -36,14 +36,15 @@ select { width:100%; font-size:13px; padding:4px; }
 }
 
 .edit-btn {
-  font-size:11px;
-  padding:2px 6px;
-  border:1px solid #999;
-  border-radius:4px;
-  cursor:pointer;
-  background:#fff;
+  font-size:11px; padding:2px 6px;
+  border:1px solid #999; border-radius:4px;
+  cursor:pointer; background:#fff;
 }
 .edit-on { background:#ffecb3; border-color:#ff9800; }
+
+input.date {
+  width:100%; font-size:11px; padding:2px;
+}
 </style>
 </head>
 
@@ -86,9 +87,9 @@ const ADMIN_UID = "pK46rxDcvEVZEyktMvc8g2FaCoH2";
 let editMode = false;
 
 const bikes = [
-  { id:1, name:"Honda Click", img:"click_redblack.png" },
-  { id:2, name:"Yamaha Fazzio", img:"fazzio_darkgrey.png" },
-  { id:3, name:"Yamaha Fazzio", img:"fazzio_lightblue.png" }
+  { id:1, name:"Honda Click", img:"click_redblack.png", plate:"1กต 8316" },
+  { id:2, name:"Yamaha Fazzio grey", img:"fazzio_darkgrey.png", plate:"1กร 5287" },
+  { id:3, name:"Yamaha Fazzio blue", img:"fazzio_lightblue.png", plate:"1กพ 2670" }
 ];
 
 auth.onAuthStateChanged(u=>{
@@ -106,19 +107,30 @@ function toggleEdit(){
   rerenderAll();
 }
 
-function daysLeft(d){
-  return Math.ceil((new Date(d) - new Date()) / 86400000);
+function parseDMY(str){
+  const [d,m,y] = str.split("/").map(Number);
+  return new Date(2000 + y, m-1, d);
+}
+function formatDMY(date){
+  const d = String(date.getDate()).padStart(2,"0");
+  const m = String(date.getMonth()+1).padStart(2,"0");
+  const y = String(date.getFullYear()).slice(-2);
+  return `${d}/${m}/${y}`;
+}
+
+function daysLeftDMY(str){
+  return Math.ceil((parseDMY(str) - new Date()) / 86400000);
 }
 
 function remainingText(days){
   if(days < 0) return "Expired / หมดอายุ";
   if(days <= 14) return days + " days / วัน";
   if(days < 60) return days + " days / วัน";
-  return Math.round(days / 30) + " months / เดือน";
+  return Math.round(days/30) + " months / เดือน";
 }
 
 function expiryLine(label, field, val, bikeId){
-  const days = daysLeft(val);
+  const days = daysLeftDMY(val);
   let cls = "";
   if(days < 0) cls = "expired";
   else if(days <= 14) cls = "warn";
@@ -126,14 +138,19 @@ function expiryLine(label, field, val, bikeId){
   if(editMode){
     return `<div class="${cls}">
       ${label}:
-      <input type="date" value="${val}"
+      <input class="date" value="${val}"
         onchange="updateExpiry('${bikeId}','${field}',this.value)">
     </div>`;
   }
+  return `<div class="${cls}">${label}: ${remainingText(days)}</div>`;
+}
 
-  return `<div class="${cls}">
-    ${label}: ${remainingText(days)}
-  </div>`;
+function timeAgo(ts){
+  const diff = Math.floor((Date.now()-ts)/1000);
+  if(diff < 3600) return Math.floor(diff/60)+" min ago";
+  if(diff < 86400) return Math.floor(diff/3600)+" h ago";
+  const d = new Date(ts);
+  return `${Math.floor(diff/86400)} d ago · ${formatDMY(d)} ${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}`;
 }
 
 function renderBike(b){
@@ -175,12 +192,13 @@ bikes.forEach(b=>{
 
     if(d.updatedAt?.toMillis){
       document.getElementById("bike"+b.id+"-time").innerText =
-        `Updated ${new Date(d.updatedAt.toMillis()).toLocaleString()} by ${d.updatedBy}`;
+        "Updated " + timeAgo(d.updatedAt.toMillis());
     }
 
     document.getElementById("bike"+b.id+"-expiry").innerHTML =
       expiryLine("Tax / ภาษี","taxExpiry",d.taxExpiry,"bike"+b.id) +
-      expiryLine("Insurance / ประกัน","insuranceExpiry",d.insuranceExpiry,"bike"+b.id);
+      expiryLine("Insurance / ประกัน","insuranceExpiry",d.insuranceExpiry,"bike"+b.id) +
+      `<div>Plate / ทะเบียน: ${b.plate}</div>`;
   });
 });
 
@@ -191,7 +209,8 @@ function rerenderAll(){
         const d = doc.data();
         document.getElementById("bike"+b.id+"-expiry").innerHTML =
           expiryLine("Tax / ภาษี","taxExpiry",d.taxExpiry,"bike"+b.id) +
-          expiryLine("Insurance / ประกัน","insuranceExpiry",d.insuranceExpiry,"bike"+b.id);
+          expiryLine("Insurance / ประกัน","insuranceExpiry",d.insuranceExpiry,"bike"+b.id) +
+          `<div>Plate / ทะเบียน: ${b.plate}</div>`;
       }
     });
   });
@@ -214,3 +233,4 @@ function updateExpiry(bikeId,field,val){
 
 </body>
 </html>
+
