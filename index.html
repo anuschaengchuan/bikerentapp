@@ -7,9 +7,11 @@
 <link rel="icon" type="image/png" href="icon.png">
 <meta name="theme-color" content="#f2f2f2">
 <link rel="apple-touch-icon" href="icon.png">
+<!-- Fonts similar to logo (heading + UI) -->
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;600&family=Playfair+Display:wght@400;700&display=swap" rel="stylesheet">
 
 <style>
-body { font-family:sans-serif; background:#f2f2f2; margin:0; padding:8px; }
+body { font-family: 'Montserrat', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; background:#f2f2f2; margin:0; padding:8px; }
 .app { max-width:360px; margin:0 auto; }
 
 /* HEADER */
@@ -22,8 +24,8 @@ body { font-family:sans-serif; background:#f2f2f2; margin:0; padding:8px; }
 
 .right { display:flex; flex-direction:column; align-items:flex-end; gap:6px; }
 
-.lang-switch { cursor:pointer; font-size:13px; display:flex; gap:6px; }
-.flag { font-size:18px; }
+.lang-switch { cursor:pointer; font-size:13px; display:flex; gap:6px; align-items:center; }
+.flag { width:22px; height:16px; display:inline-block; object-fit:cover; border-radius:3px; }
 
 .actions { display:flex; gap:8px; align-items:center; }
 
@@ -33,6 +35,7 @@ body { font-family:sans-serif; background:#f2f2f2; margin:0; padding:8px; }
   padding:6px 14px; font-size:13px;
   border-radius:6px; border:1px solid #bbb;
   background:#fff; cursor:pointer;
+  font-family: 'Montserrat', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
 }
 .btn.edit-on { background:#ffecb3; border-color:#ff9800; }
 
@@ -42,17 +45,34 @@ body { font-family:sans-serif; background:#f2f2f2; margin:0; padding:8px; }
   margin-bottom:8px; border:2px solid transparent;
   box-shadow:0 1px 3px rgba(0,0,0,.08);
 }
-.card.free { background:#e8f5e9; border-color:#4caf50; }
-.card.assigned { border-color:#e53935; }
-.card.unavailable { background:#eee; border-color:#9e9e9e; }
+.card { --card-bg: #fff; }
+.card.free { background:#e8f5e9; border-color:#4caf50; --status-flash: rgba(76,175,80,0.16); --card-bg:#e8f5e9; }
+.card.assigned { border-color:#e53935; --status-flash: rgba(229,57,53,0.16); --card-bg:#fff; }
+.card.unavailable { background:#eee; border-color:#9e9e9e; --status-flash: rgba(158,158,158,0.12); --card-bg:#eee; }
 
-.name { font-weight:700; margin-bottom:6px; }
+.name { font-family: 'Montserrat', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; font-weight:700; margin-bottom:6px; font-size:16px; }
+.name { font-family: 'Montserrat', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; font-weight:700; margin-bottom:4px; font-size:16px; }
 
-.row { display:flex; gap:10px; }
-img.bike { width:120px; }
+.card-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; }
+.plate-right { font-family: 'Montserrat', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; font-weight:800; color:#222; font-size:16px; }
 
-.info { font-size:11px; color:#555; line-height:1.6; }
-.info div { margin-bottom:6px; }
+.meta { display:flex; gap:6px; flex-wrap:wrap; align-items:center; }
+.meta > div { min-width:110px; }
+.meta-entry { background:transparent; padding:4px 6px 1px 6px; border-radius:6px; min-width:110px; border-left:3px solid rgba(0,0,0,0.04); display:flex; flex-direction:column; position:relative; overflow:hidden; }
+.meta-label { font-size:11px; color:#666; line-height:1; }
+.meta-value { font-weight:700; color:#222; margin-top:1px; font-size:13px; line-height:1; }
+
+/* overlay to hide underlying box during flash */
+.meta-entry::before { content:""; position:absolute; inset:0; background:transparent; z-index:0; pointer-events:none; }
+.meta-entry .meta-label, .meta-entry .meta-value { position:relative; z-index:1; }
+.meta-entry.warn::before, .meta-entry.expired::before { animation: flash-red 1.2s infinite; }
+.meta-edit { display:flex; gap:12px; flex-direction:column; }
+
+.row { display:flex; gap:8px; align-items:center; }
+img.bike { width:110px; max-width:40%; height:auto; flex-shrink:0; object-fit:contain; margin-right:14px; }
+
+.info { font-size:12px; color:#555; line-height:1.3; }
+.info div { margin-bottom:4px; }
 
 .status-btn {
   margin-top:6px;
@@ -61,6 +81,7 @@ img.bike { width:120px; }
   align-items:center;
   justify-content:center;
   font-weight:700;
+  font-family: 'Montserrat', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
   border-radius:6px;
   border:1px solid #999;
   cursor:pointer;
@@ -82,11 +103,18 @@ img.bike { width:120px; }
 
 input.date { width:100%; font-size:11px; padding:2px; }
 
-.warn { color:#ff9800; animation:flash 1.2s infinite; }
+
+.warn { color:#ff9800; }
 .expired { color:#e53935; font-weight:600; }
 
 @keyframes flash {
   0%{opacity:1} 50%{opacity:.3} 100%{opacity:1}
+}
+
+@keyframes flash-red {
+  0%{background:transparent; box-shadow:none}
+  50%{background:linear-gradient(90deg, rgba(229,57,53,0.16) 0%, var(--card-bg, #fff) 85%); box-shadow:0 0 8px rgba(0,0,0,0.04)}
+  100%{background:transparent; box-shadow:none}
 }
 </style>
 </head>
@@ -101,7 +129,7 @@ input.date { width:100%; font-size:11px; padding:2px; }
   <div class="right">
     <div class="lang-switch" onclick="toggleLang()">
       <span id="langLabel"></span>
-      <span id="langFlag" class="flag"></span>
+      <img id="langFlag" class="flag" alt="lang">
     </div>
 
     <div class="actions">
@@ -223,7 +251,8 @@ function renderBike(b){
       if(days<0) cls="expired";
       else if(days<=14) cls="warn";
     }
-    return `<div class="${cls}">${label}: ${remaining(days)}</div>`;
+    const value = remaining(days);
+    return `<div class="meta-entry ${cls}"><div class="meta-label">${label}</div><div class="meta-value">${value}</div></div>`;
   }
 
   const statusLabel =
@@ -233,20 +262,27 @@ function renderBike(b){
 
   return `
   <div class="card ${d.status==='Free'?'free':d.status==='Unavailable'?'unavailable':'assigned'}">
-    <div class="name">${b.name}</div>
+    <div class="card-header">
+      <div class="name">${b.name}</div>
+      <div class="plate-right">${b.plate}</div>
+    </div>
+
     <div class="row">
       <img src="${b.img}" class="bike" onerror="this.style.display='none'">
       <div class="info">
         ${editMode?`
-          <div>${T[lang].tax}: <input class="date" value="${d.taxExpiry||""}"
-            onchange="saveExpiry(${b.id},'taxExpiry',this.value)"></div>
-          <div>${T[lang].insurance}: <input class="date" value="${d.insuranceExpiry||""}"
-            onchange="saveExpiry(${b.id},'insuranceExpiry',this.value)"></div>
+          <div class="meta-edit">
+            <div>${T[lang].tax}: <input class="date" value="${d.taxExpiry||""}"
+              onchange="saveExpiry(${b.id},'taxExpiry',this.value)"></div>
+            <div>${T[lang].insurance}: <input class="date" value="${d.insuranceExpiry||""}"
+              onchange="saveExpiry(${b.id},'insuranceExpiry',this.value)"></div>
+          </div>
         `:`
-          ${line(T[lang].tax,taxDays)}
-          ${line(T[lang].insurance,insDays)}
+          <div class="meta">
+            ${line(T[lang].tax,taxDays)}
+            ${line(T[lang].insurance,insDays)}
+          </div>
         `}
-        <div>${T[lang].plate}: ${b.plate}</div>
       </div>
     </div>
 
@@ -352,7 +388,12 @@ function toggleLang(){
 }
 function updateHeader(){ 
   document.getElementById("langLabel").innerText=lang==="en"?"ไทย":"English"; 
-  document.getElementById("langFlag").innerText=lang==="en"?"🇹🇭":"🇬🇧"; 
+  const langFlag = document.getElementById("langFlag");
+  // embedded SVG flags (small, widely supported)
+  const thaiSvg = 'data:image/svg+xml;utf8,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 14"><rect width="20" height="14" fill="#d7141a"/><rect y="2" width="20" height="2" fill="#fff"/><rect y="4" width="20" height="6" fill="#0a2aa0"/><rect y="10" width="20" height="2" fill="#fff"/><rect y="12" width="20" height="2" fill="#d7141a"/></svg>');
+  const gbSvg = 'data:image/svg+xml;utf8,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 14"><rect width="20" height="14" fill="#012169"/><polygon points="0,0 3,0 20,11 20,14 17,14 0,3" fill="#fff"/><polygon points="0,14 3,14 20,3 20,0 17,0 0,11" fill="#fff"/><rect x="8" width="4" height="14" fill="#fff"/><rect y="5" width="20" height="4" fill="#fff"/><rect x="9" width="2" height="14" fill="#c8102e"/><rect y="6" width="20" height="2" fill="#c8102e"/></svg>');
+  langFlag.src = (lang==="en") ? thaiSvg : gbSvg;
+  langFlag.alt = (lang==="en") ? 'Thai' : 'English';
   loginBtn.innerText=T[lang].login; 
   logoutBtn.innerText=T[lang].logout; 
 }
